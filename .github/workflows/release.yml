@@ -1,0 +1,99 @@
+name: Release
+
+# Every push to main verifies the code, builds the Linux and Windows installers
+# and publishes them as a new GitHub release.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '24'
+
+jobs:
+  verify:
+    name: Verify
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - name: Compute release version
+        id: version
+        # major.minor come from package.json, the patch is the workflow run number minus one, so the first run publishes X.Y.0.
+        run: |
+          BASE=$(node -p "require('./package.json').version.split('.').slice(0,2).join('.')")
+          echo "version=${BASE}.$((GITHUB_RUN_NUMBER - 1))" >> "$GITHUB_OUTPUT"
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npx vitest --run
+
+  build:
+    name: Build (${{ matrix.name }})
+    needs: verify
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - name: Linux
+            os: ubuntu-latest
+            args: --linux AppImage deb
+          - name: Windows
+            os: windows-latest
+            args: --win nsis
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      # Native modules (sqlite-vec) must be installed on the target OS.
+      - run: npm ci
+      - run: npm run build
+      - name: Package
+        shell: bash
+        run: npx electron-builder ${{ matrix.args }} --publish never -c.extraMetadata.version=${{ needs.verify.outputs.version }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installers-${{ matrix.name }}
+          if-no-files-found: error
+          path: |
+            release/*.AppImage
+            release/*.deb
+            release/*.exe
+
+  publish:
+    name: Publish release
+    needs: [verify, build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist-release
+          pattern: installers-*
+          merge-multiple: true
+      - name: List files
+        run: ls -la dist-release
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          gh release create "v${VERSION}" dist-release/* \
+            --target "${GITHUB_SHA}" \
+            --title "OUIJA v${VERSION}" \
+            --generate-notes

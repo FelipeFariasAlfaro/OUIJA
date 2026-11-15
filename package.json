@@ -1,0 +1,52 @@
+{
+  "name": "medium",
+  "version": "0.1.0",
+  "description": "OUIJA: arqueología digital personal. Resucita archivos, busca por significado y encuentra fantasmas digitales. Todo local.",
+  "license": "MIT",
+  "private": true,
+  "main": "./out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
+    "lint": "eslint .",
+    "test": "vitest",
+    "package": "npm run build && electron-builder --publish never",
+    "e2e": "npm run build && vitest --run --config vitest.e2e.config.ts",
+    "icons": "node scripts/make-icons.mjs"
+  },
+  "dependencies": {
+    "chokidar": "^6.0.0",
+    "framer-motion": "^14.14.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "sqlite-vec": "^0.1.9",
+    "unpdf": "^2.2.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@tailwindcss/vite": "^4.3.5",
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.3.0",
+    "electron": "^45.3.2",
+    "electron-builder": "^26.18.0",
+    "electron-vite": "^6.0.0",
+    "eslint": "^10.15.0",
+    "fast-check": "^4.10.2",
+    "playwright-core": "^1.65.1",
+    "tailwindcss": "^4.3.5",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.72.2",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.0"
+  },
+  "author": {
+    "name": "HakaLab",
+    "email": "contacto@hakalab.com"
+  },
+  "homepage": "https://hakalab.com",
+  "desktopName": "medium.desktop"
+}

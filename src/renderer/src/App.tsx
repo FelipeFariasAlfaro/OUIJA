@@ -1,0 +1,128 @@
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import type { IndexState, Settings } from '@shared/ipc'
+import { api } from './api'
+import { GhostIcon } from './components/ui'
+import WindowControls from './components/WindowControls'
+import { I18nContext, makeI18n, type Lang } from './i18n'
+import GallowsView from './views/GallowsView'
+import GhostsView from './views/GhostsView'
+import PeopleView from './views/PeopleView'
+import Onboarding from './onboarding/Onboarding'
+import SearchView from './views/SearchView'
+import SettingsView from './views/SettingsView'
+
+type View = 'search' | 'ghosts' | 'people' | 'gallows' | 'settings'
+const VIEWS: View[] = ['search', 'ghosts', 'people', 'gallows', 'settings']
+
+const IDLE: IndexState = { phase: 'idle', processed: 0, total: 0, indexed: 0, skipped: 0, errors: 0 }
+
+export default function App() {
+  const [view, setView] = useState<View>('search')
+  const [settings, setSettings] = useState<Settings | null>(null)
+  const [index, setIndex] = useState<IndexState>(IDLE)
+  const lang: Lang = settings?.lang ?? 'es'
+  const i18n = useMemo(() => makeI18n(lang), [lang])
+  const { t } = i18n
+
+  useEffect(() => {
+    void api.getSettings().then(setSettings)
+    void api.indexState().then(setIndex)
+    return api.onIndexState(setIndex)
+  }, [])
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') api.minimize()
+      if ((e.ctrlKey || e.metaKey) && ['1', '2', '3', '4', '5'].includes(e.key)) {
+        e.preventDefault()
+        setView(VIEWS[Number(e.key) - 1])
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
+  const addFolder = useCallback(() => void api.addFolder().then(setSettings), [])
+
+  const tabs: { id: View; label: string }[] = [
+    { id: 'search', label: t.tabSearch },
+    { id: 'ghosts', label: t.tabGhosts },
+    { id: 'people', label: t.tabPeople },
+    { id: 'gallows', label: t.tabGallows },
+    { id: 'settings', label: t.tabSettings }
+  ]
+  const busy = index.phase === 'scanning' || index.phase === 'indexing' || index.phase === 'reading' || index.phase === 'entities'
+
+  if (settings && !settings.onboarded) {
+    return (
+      <Onboarding
+        settings={settings}
+        onDone={(s) => {
+          setSettings(s)
+          setView('search')
+        }}
+      />
+    )
+  }
+
+  return (
+    <I18nContext.Provider value={i18n}>
+      <div
+        className="relative flex h-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0d0d16]"
+        style={{
+          backgroundImage:
+            'radial-gradient(600px 220px at 50% -60px, rgba(139,92,246,.22), transparent 70%), radial-gradient(400px 200px at 100% 100%, rgba(99,102,241,.10), transparent 70%)'
+        }}
+      >
+        <header className="flex items-center gap-1 px-4 pb-3 pt-3.5 [-webkit-app-region:drag]">
+          <div className="mr-3 flex items-center gap-2 text-sm font-semibold text-violet-200">
+            <GhostIcon className="h-5 w-5" /> OUIJA
+          </div>
+          <nav className="flex gap-1 [-webkit-app-region:no-drag]" aria-label="Vistas">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setView(tab.id)}
+                className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${view === tab.id ? 'bg-violet-400/15 text-violet-200' : 'text-zinc-400 hover:text-zinc-200'}`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </nav>
+          <div className="ml-auto flex items-center gap-3">
+            {busy && (
+              <button type="button" onClick={() => setView('settings')} className="flex items-center gap-1.5 rounded-full bg-violet-400/10 px-2 py-0.5 text-[11px] text-violet-200 [-webkit-app-region:no-drag]">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-violet-300" />
+                {index.total > 0 ? `${index.processed}/${index.total}` : '…'}
+              </button>
+            )}
+            <span className="flex items-center gap-1.5 text-[11px] text-zinc-500">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              {t.localBadge}
+            </span>
+            <WindowControls />
+          </div>
+        </header>
+
+        {view === 'search' && <SearchView key={lang} hasFolders={(settings?.folders.length ?? 0) > 0 || index.indexed > 0} onAddFolder={addFolder} changesKey={`${index.phase}-${index.indexed}`} onGallows={() => setView('gallows')} />}
+        {view === 'ghosts' && <GhostsView key={`${lang}-${index.phase}`} />}
+        {view === 'people' && <PeopleView key={`${lang}-${index.phase}`} />}
+        {view === 'gallows' && <GallowsView key={lang} />}
+        {view === 'settings' && settings && <SettingsView settings={settings} index={index} onSettings={setSettings} />}
+
+        <footer className="flex items-center gap-4 border-t border-white/5 px-4 py-2 text-[11px] text-zinc-500">
+          <span>
+            <kbd className="rounded bg-white/5 px-1">↑↓</kbd> {t.hintNav}
+          </span>
+          <span>
+            <kbd className="rounded bg-white/5 px-1">Enter</kbd> {t.hintOpen}
+          </span>
+          <span>
+            <kbd className="rounded bg-white/5 px-1">Esc</kbd> {t.hintHide}
+          </span>
+        </footer>
+      </div>
+    </I18nContext.Provider>
+  )
+}

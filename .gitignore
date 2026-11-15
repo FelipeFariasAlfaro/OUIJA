@@ -1,0 +1,13 @@
+node_modules/
+dist/
+out/
+release/
+*.log
+.env
+.env.*
+!.env.example
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+.DS_Store
+# NOTE: do not ignore .kiro/ (hackathon requirement)

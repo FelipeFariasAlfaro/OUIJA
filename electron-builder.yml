@@ -1,0 +1,43 @@
+appId: com.hakalab.ouija
+productName: OUIJA
+copyright: Copyright © 2026 HakaLab
+directories:
+  output: release
+  buildResources: resources
+files:
+  - out/**
+  - package.json
+  - '!**/*.map'
+# Librerías nativas: no se pueden cargar desde dentro del .asar.
+asarUnpack:
+  - '**/node_modules/sqlite-vec*/**'
+icon: resources/icon.png
+linux:
+  artifactName: OUIJA-${version}.${ext}
+  syncDesktopName: true
+  target:
+    - AppImage
+    - deb
+  category: Utility
+  maintainer: HakaLab <contacto@hakalab.com>
+  synopsis: Find your files by meaning, resurrect old formats and hunt digital ghosts.
+  executableName: ouija
+  desktop:
+    entry:
+      Name: OUIJA
+      Comment: Personal digital archaeology, all local
+      Categories: Utility;
+      Keywords: files;search;documents;ai;
+win:
+  target:
+    - nsis
+  icon: resources/icon.png
+nsis:
+  artifactName: OUIJA-Setup-${version}.${ext}
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+deb:
+  packageName: ouija
+  artifactName: ouija_${version}_${arch}.${ext}
