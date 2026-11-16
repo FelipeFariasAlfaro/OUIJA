@@ -2,6 +2,11 @@
 
 All notable changes to OUIJA. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.5.1] - 2026-11-16
+
+### Changed
+- Latest changes: hovering a file shows "Show folder" and "Open file".
+
 ## [0.5.0] - 2026-11-16
 
 ### Changed
@@ -65,6 +70,7 @@ All notable changes to OUIJA. The format follows [Keep a Changelog](https://keep
 - Onboarding with automatic setup of Ollama and the models.
 - Linux (AppImage, deb) and Windows (NSIS) installers built on every push to `main`.
 
+[0.5.1]: https://github.com/FelipeFariasAlfaro/OUIJA/releases/tag/v0.5.1
 [0.5.0]: https://github.com/FelipeFariasAlfaro/OUIJA/releases/tag/v0.5.0
 [0.4.0]: https://github.com/FelipeFariasAlfaro/OUIJA/releases/tag/v0.4.0
 [0.3.0]: https://github.com/FelipeFariasAlfaro/OUIJA/releases/tag/v0.3.0

@@ -84,7 +84,7 @@ OUIJA ships a read-only [Model Context Protocol](https://modelcontextprotocol.io
 ```json
 {
   "mcpServers": {
-    "ouija": { "command": "/path/to/OUIJA-0.5.0.AppImage", "args": ["--mcp"] }
+    "ouija": { "command": "/path/to/OUIJA-0.5.1.AppImage", "args": ["--mcp"] }
   }
 }
 ```

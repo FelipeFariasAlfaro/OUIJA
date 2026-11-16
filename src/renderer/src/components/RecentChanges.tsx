@@ -3,7 +3,7 @@ import type { ChangeDto } from '@shared/ipc'
 import { api } from '../api'
 import { ago } from '../ago'
 import { useI18n } from '../i18n'
-import { FileIcon } from './ui'
+import { ActionButton, FileIcon } from './ui'
 
 const STYLE = {
   added: { key: 'changeAdded', cls: 'bg-emerald-400/10 text-emerald-200 border-emerald-400/25' },
@@ -44,7 +44,7 @@ export default function RecentChanges({ refreshKey, onGallows }: { refreshKey: s
             const st = STYLE[c.kind]
             const open = c.exists && c.kind !== 'removed'
             return (
-              <li key={c.id} className="flex items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-white/[0.03]">
+              <li key={c.id} className="group flex items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-white/[0.03]">
                 <FileIcon ext={c.ext} />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
@@ -64,6 +64,14 @@ export default function RecentChanges({ refreshKey, onGallows }: { refreshKey: s
                   <button type="button" onClick={onGallows} className="shrink-0 text-[11px] text-violet-300 hover:text-violet-200">
                     {t.changeViewGallows}
                   </button>
+                )}
+                {open && (
+                  <div className="flex shrink-0 gap-1.5 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
+                    <ActionButton onClick={() => void api.showInFolder(c.path).catch(() => undefined)}>{c.path.includes('::') ? t.showContainer : t.showFolder}</ActionButton>
+                    <ActionButton primary onClick={() => void api.openFile(c.path).catch(() => undefined)}>
+                      {t.open}
+                    </ActionButton>
+                  </div>
                 )}
               </li>
             )
