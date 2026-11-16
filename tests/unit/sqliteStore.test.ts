@@ -75,3 +75,18 @@ describe('SqliteStore', () => {
     expect(await store.listFiles()).toEqual([d])
   })
 })
+describe('tipos de archivo en las búsquedas', () => {
+  it('excluye extensiones y cuenta lo que hay por extensión', async () => {
+    store = new SqliteStore(':memory:', { dimensions: DIM })
+    await store.upsert(doc('/a/uno.txt'), [chunk(0, 'rosa', vec(1, 0, 0))])
+    await store.upsert(doc('/a/dos.csv', { ext: 'csv' }), [chunk(0, 'rosa', vec(1, 0, 0))])
+    await store.upsert(doc('/a/tres.csv', { ext: 'csv' }), [chunk(0, 'rosa', vec(1, 0, 0))])
+    expect((await store.search({ text: 'rosa', filter: { excludeExtensions: ['csv'] } })).map((h) => h.doc.path)).toEqual(['/a/uno.txt'])
+    expect((await store.search({ embedding: vec(1, 0, 0), filter: { excludeExtensions: ['csv'] } })).map((h) => h.doc.path)).toEqual(['/a/uno.txt'])
+    expect((await store.search({ text: 'rosa', filter: { excludeExtensions: [] } })).length).toBe(3)
+    expect((await store.extensionCounts()).sort((a, b) => a.ext.localeCompare(b.ext))).toEqual([
+      { ext: 'csv', count: 2 },
+      { ext: 'txt', count: 1 }
+    ])
+  })
+})

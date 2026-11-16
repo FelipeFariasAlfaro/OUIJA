@@ -31,10 +31,15 @@ jobs:
           cache: npm
       - name: Compute release version
         id: version
-        # major.minor come from package.json, the patch is the workflow run number minus one, so the first run publishes X.Y.0.
+        # The version in package.json is published as is. If that release already exists, the patch
+        # number goes up until a free one is found, so every push still gets its own release.
         run: |
-          BASE=$(node -p "require('./package.json').version.split('.').slice(0,2).join('.')")
-          echo "version=${BASE}.$((GITHUB_RUN_NUMBER - 1))" >> "$GITHUB_OUTPUT"
+          VERSION=$(node -p "require('./package.json').version")
+          IFS=. read -r MAJOR MINOR PATCH <<< "$VERSION"
+          while git ls-remote --exit-code --tags origin "refs/tags/v${MAJOR}.${MINOR}.${PATCH}" > /dev/null; do
+            PATCH=$((PATCH + 1))
+          done
+          echo "version=${MAJOR}.${MINOR}.${PATCH}" >> "$GITHUB_OUTPUT"
       - run: npm ci
       - run: npm run typecheck
       - run: npm run lint

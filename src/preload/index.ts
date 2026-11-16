@@ -11,6 +11,8 @@ const api: MediumApi = {
   openFile: (path) => ipcRenderer.invoke(IPC.openFile, path),
   showInFolder: (path) => ipcRenderer.invoke(IPC.showInFolder, path),
   exportFile: (path) => ipcRenderer.invoke(IPC.exportFile, path),
+  bringToPresent: (path) => ipcRenderer.invoke(IPC.bringToPresent, path),
+  mcpConfig: () => ipcRenderer.invoke(IPC.mcpConfig),
   getSettings: () => ipcRenderer.invoke(IPC.getSettings),
   setSettings: (patch) => ipcRenderer.invoke(IPC.setSettings, patch),
   addFolder: () => ipcRenderer.invoke(IPC.addFolder),
@@ -21,6 +23,7 @@ const api: MediumApi = {
   forgetAll: () => ipcRenderer.invoke(IPC.forgetAll),
   ollamaStatus: () => ipcRenderer.invoke(IPC.ollamaStatus),
   appInfo: () => ipcRenderer.invoke(IPC.appInfo),
+  fileKinds: () => ipcRenderer.invoke(IPC.fileKinds),
   recentChanges: (limit) => ipcRenderer.invoke(IPC.recentChanges, limit),
   trashList: () => ipcRenderer.invoke(IPC.trashList),
   trashRestore: (ids, destination) => ipcRenderer.invoke(IPC.trashRestore, ids, destination),
@@ -47,6 +50,7 @@ const api: MediumApi = {
     return () => ipcRenderer.removeListener(IPC.onSetupState, handler)
   },
   minimize: () => ipcRenderer.send(IPC.minimize),
+  toggleMaximize: () => ipcRenderer.send(IPC.toggleMaximize),
   quit: () => ipcRenderer.send(IPC.quit),
   onIndexState: (listener) => {
     const handler = (_event: Electron.IpcRendererEvent, state: IndexState) => listener(state)

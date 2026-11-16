@@ -1,3 +1,4 @@
+import type { Lang } from './langs'
 /** Tipos de archivo que OUIJA conoce. Puro y sin dependencias: lo usan el núcleo y la interfaz. */
 
 export type FileKind =
@@ -93,7 +94,7 @@ export const KIND_WORDS: Record<FileKind, string> = {
   other: 'archivo file'
 }
 
-export const KIND_LABEL: Record<'es' | 'en', Record<FileKind, string>> = {
+export const KIND_LABEL: Record<Lang, Record<FileKind, string>> = {
   es: {
     document: 'Documento',
     spreadsheet: 'Planilla',
@@ -131,5 +132,9 @@ export const KIND_LABEL: Record<'es' | 'en', Record<FileKind, string>> = {
     font: 'Font',
     executable: 'Program',
     other: 'File'
-  }
+  },
+  pt: { document: 'Documento', spreadsheet: 'Planilha', presentation: 'Apresentação', text: 'Texto', code: 'Código', data: 'Dados', web: 'Página web', ebook: 'Livro', email: 'E-mail', image: 'Imagem', design: 'Design', audio: 'Áudio', video: 'Vídeo', archive: 'Backup', font: 'Fonte', executable: 'Programa', other: 'Arquivo' },
+  fr: { document: 'Document', spreadsheet: 'Tableur', presentation: 'Présentation', text: 'Texte', code: 'Code', data: 'Données', web: 'Page web', ebook: 'Livre', email: 'E-mail', image: 'Image', design: 'Design', audio: 'Audio', video: 'Vidéo', archive: 'Sauvegarde', font: 'Police', executable: 'Programme', other: 'Fichier' },
+  ja: { document: '文書', spreadsheet: '表計算', presentation: 'プレゼン', text: 'テキスト', code: 'コード', data: 'データ', web: 'ウェブページ', ebook: '電子書籍', email: 'メール', image: '画像', design: 'デザイン', audio: '音声', video: '動画', archive: 'バックアップ', font: 'フォント', executable: 'プログラム', other: 'ファイル' },
+  zh: { document: '文档', spreadsheet: '表格', presentation: '演示文稿', text: '文本', code: '代码', data: '数据', web: '网页', ebook: '电子书', email: '邮件', image: '图片', design: '设计', audio: '音频', video: '视频', archive: '备份', font: '字体', executable: '程序', other: '文件' }
 }

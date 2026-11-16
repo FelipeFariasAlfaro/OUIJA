@@ -14,6 +14,8 @@ export interface MemoryStore {
   forgetAll(): Promise<void>
   listFiles(filter?: FileFilter): Promise<IndexedDoc[]>
   hasPath(path: string): Promise<boolean>
+  /** Cuántos archivos hay por extensión . */
+  extensionCounts(): Promise<{ ext: string; count: number }[]>
   getDoc(path: string): Promise<IndexedDoc | undefined>
   /** Imágenes sueltas pequeñas cuyo texto aún no se leyó (o cambiaron desde entonces). */
   pendingOcrDocs(extensions: string[], maxSize: number): Promise<IndexedDoc[]>

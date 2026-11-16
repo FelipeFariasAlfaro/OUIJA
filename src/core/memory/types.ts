@@ -29,6 +29,8 @@ export interface Chunk {
 export interface FileFilter {
   /** Extensiones en minúscula, sin punto. */
   extensions?: string[]
+  /** Extensiones que nunca deben aparecer (el usuario las dejó fuera de las búsquedas). */
+  excludeExtensions?: string[]
   /** Prefijo de ruta. */
   folder?: string
   /** mtime mínimo (ms). */

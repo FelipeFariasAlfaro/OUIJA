@@ -117,6 +117,25 @@ OUIJA is a desktop app (Windows and Linux) for personal digital archaeology. It 
 5. THE system SHALL NOT overwrite anything when resurrecting: if a file with the same name exists, it renames the restored one to "(resucitado)".
 6. THE UI SHALL be able to act only on items from the last trash read (max 200 at a time) and show only paths resurrected in the session.
 
+### R14. File types in searches
+1. THE Settings view SHALL list the file types found in the index, with how many files of each.
+2. THE user SHALL be able to leave types out of searches; by default every type is included.
+3. Leaving a type out SHALL NOT delete or re-index anything, and SHALL apply also when search filters are relaxed.
+
+### R15. MCP server
+1. THE system SHALL offer a read-only MCP server over stdio with tools to find files by meaning, read recovered text, list ghosts, find people and list recent changes.
+2. THE server SHALL read only files present in the index and SHALL NOT modify, move or delete anything.
+3. THE server SHALL run alongside the open app without blocking it, and SHALL NOT load API keys.
+4. THE Settings view SHALL show a ready-to-paste configuration with the paths of the current installation.
+
+### R16. Languages
+1. THE interface SHALL be available in Spanish, English, Portuguese, French, Japanese and Chinese, and answers SHALL be written in the chosen language.
+2. THE first run SHALL preselect the system language when OUIJA speaks it, and English otherwise.
+
+### R17. Bring to the present
+1. WHEN a result was resurrected, THE user SHALL be able to save a copy in a current format: DOCX or XLSX through LibreOffice, or UTF-8 Markdown with the recovered text.
+2. THE system SHALL NOT overwrite existing files nor modify the original.
+
 ## Verifiable properties (PBT)
 
 - P1: every path cited in an answer exists in the index.

@@ -1,6 +1,7 @@
 /// <reference lib="dom" />
-import { execFileSync } from 'node:child_process'
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { execFileSync, spawn } from 'node:child_process'
+import { createInterface } from 'node:readline'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { _electron as electron, type ElectronApplication, type Page } from 'playwright-core'
@@ -91,8 +92,91 @@ describe('demo: carpeta caótica', () => {
     await page.getByRole('button', { name: 'Buscar', exact: true }).click() // sea cual sea la vista activa
     await page.locator('input').fill('¿dónde está el poema para Rosa?')
     await page.keyboard.press('Enter')
-    await page.getByText('rosa_v1.txt').first().waitFor({ timeout: 60_000 })
+    await page.getByRole('listitem').filter({ hasText: 'rosa_v1.txt' }).first().waitFor({ timeout: 60_000 })
+    await page.getByText('Resucitado').first().waitFor({ timeout: 10_000 })
     await page.screenshot({ path: join(tmpdir(), 'medium-demo-poema.png') })
-    expect(await page.getByText('Resucitado').count()).toBeGreaterThan(0)
+    // La X borra la pregunta y la respuesta, y deja el cursor listo para otra.
+    await page.getByRole('button', { name: 'Borrar la pregunta' }).click()
+    expect(await page.locator('input').inputValue()).toBe('')
+    expect(await page.getByText('rosa_v1.txt').count()).toBe(0)
+    expect(await page.evaluate(() => document.activeElement?.tagName)).toBe('INPUT')
+  })
+  it('Personas / Espectros: busca por nombre y abre la ubicación de los archivos que la mencionan', async () => {
+    await expect.poll(() => call<{ name: string }[]>('people').then((p) => p.some((x) => /rosa/i.test(x.name))), { timeout: 240_000, interval: 2000 }).toBe(true)
+    // Que "Mostrar carpeta" no abra de verdad el explorador durante la prueba.
+    await app.evaluate(({ shell }) => {
+      const g = globalThis as unknown as { revealed: string[] }
+      g.revealed = []
+      shell.showItemInFolder = (p: string) => void g.revealed.push(p)
+    })
+    await page.getByRole('button', { name: 'Personas', exact: true }).click()
+    await page.getByRole('heading', { name: 'Personas / Espectros' }).waitFor()
+    await page.getByRole('textbox', { name: 'Buscar un nombre…' }).fill('ROSA')
+    const list = page.getByTestId('people-list')
+    await expect.poll(() => list.innerText()).toMatch(/Rosa/)
+    expect(await list.innerText()).not.toMatch(/Salinas/)
+    await list.getByRole('button').first().click()
+    const files = page.getByTestId('person-files')
+    await expect.poll(() => files.getByRole('button', { name: /Mostrar/ }).count()).toBeGreaterThan(0)
+    await page.screenshot({ path: '/tmp/espectros.png' })
+    await files.getByRole('button', { name: /Mostrar/ }).first().click()
+    await expect.poll(() => app.evaluate(() => (globalThis as unknown as { revealed: string[] }).revealed.length)).toBe(1)
+    const revealed = await app.evaluate(() => (globalThis as unknown as { revealed: string[] }).revealed[0])
+    expect(revealed.startsWith(chaos)).toBe(true)
+  }, 300_000)
+  it('MCP: un agente pregunta por stdio, con la app abierta, y lee el WordPerfect resucitado', async () => {
+    const config = JSON.parse(await call<string>('mcpConfig')) as { mcpServers: { ouija: { command: string; args: string[]; env: Record<string, string> } } }
+    const server = config.mcpServers.ouija
+    expect(server.env.OUIJA_DATA_DIR).toBe(data)
+    const child = spawn(server.command, server.args, { env: { ...process.env, ...server.env }, stdio: ['pipe', 'pipe', 'inherit'] })
+    const lines = createInterface({ input: child.stdout! })
+    const replies = new Map<number, Record<string, unknown>>()
+    lines.on('line', (l) => {
+      const msg = JSON.parse(l) as { id: number }
+      replies.set(msg.id, msg)
+    })
+    const send = (m: object) => child.stdin!.write(`${JSON.stringify(m)}\n`)
+    const reply = async (id: number) => {
+      await expect.poll(() => replies.has(id), { timeout: 60_000 }).toBe(true)
+      return replies.get(id) as { result: { tools?: { name: string }[]; content?: { text: string }[]; isError?: boolean } }
+    }
+    try {
+      send({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'e2e', version: '1' } } })
+      expect((await reply(1)).result).toMatchObject({ serverInfo: { name: 'ouija' } })
+      send({ jsonrpc: '2.0', method: 'notifications/initialized' })
+      send({ jsonrpc: '2.0', id: 2, method: 'tools/list' })
+      expect((await reply(2)).result.tools!.map((t) => t.name)).toEqual(['ask_ouija', 'read_resurrected', 'list_ghosts', 'find_person', 'recent_changes'])
+      send({ jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'ask_ouija', arguments: { question: 'agradecimientos de la tesis a Rosa Campos' } } })
+      const found = JSON.parse((await reply(3)).result.content![0].text) as { files: { name: string; path: string }[] }
+      const wpd = found.files.find((f) => f.name === 'tesis_borrador_v2.wpd')
+      expect(wpd, JSON.stringify(found.files.map((f) => f.name))).toBeDefined()
+      send({ jsonrpc: '2.0', id: 4, method: 'tools/call', params: { name: 'read_resurrected', arguments: { path: wpd!.path } } })
+      const read = JSON.parse((await reply(4)).result.content![0].text) as { text: string; resurrected: boolean }
+      expect(read.text).toMatch(/Rosa/)
+      // Solo lo que está en el índice: nada de rutas arbitrarias.
+      send({ jsonrpc: '2.0', id: 5, method: 'tools/call', params: { name: 'read_resurrected', arguments: { path: '/etc/passwd' } } })
+      expect((await reply(5)).result.isError).toBe(true)
+    } finally {
+      child.stdin!.end()
+      await new Promise((ok) => child.once('exit', ok))
+    }
+  }, 120_000)
+  it('"Traer al presente": el WordPerfect de 2008 queda como un archivo de hoy, sin tocar el original', async () => {
+    const out = mkdtempSync(join(tmpdir(), 'medium-present-'))
+    await app.evaluate(({ dialog, shell }, dir) => {
+      dialog.showOpenDialog = (async () => ({ canceled: false, filePaths: [dir] })) as typeof dialog.showOpenDialog
+      shell.showItemInFolder = () => undefined
+    }, out)
+    const r = await call<SearchAnswer>('ask', 'agradecimientos de la tesis a Rosa Campos y al doctor Salinas')
+    const wpd = r.matches.find((m) => m.name === 'tesis_borrador_v2.wpd')!
+    const res = await call<{ savedTo: string; format: string }>('bringToPresent', wpd.path)
+    expect(['docx', 'md']).toContain(res.format)
+    expect(res.savedTo.startsWith(out)).toBe(true)
+    if (res.format === 'md') expect(readFileSync(res.savedTo, 'utf8')).toMatch(/Rosa/)
+    else expect(readFileSync(res.savedTo).subarray(0, 2).toString()).toBe('PK')
+    // Una segunda vez no sobrescribe: crea otro archivo.
+    const again = await call<{ savedTo: string }>('bringToPresent', wpd.path)
+    expect(again.savedTo).not.toBe(res.savedTo)
+    rmSync(out, { recursive: true, force: true })
   })
 })

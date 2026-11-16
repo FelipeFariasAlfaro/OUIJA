@@ -2,7 +2,7 @@
 
 export type Confidence = 'high' | 'medium' | 'low'
 
-export type Lang = 'es' | 'en'
+export type { Lang } from './langs'
 
 /** Coincidencia mostrada en la paleta. */
 export interface Match {

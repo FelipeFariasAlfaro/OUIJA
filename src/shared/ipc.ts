@@ -24,8 +24,14 @@ export interface Settings {
   watchFolders: boolean
   /** Leer, en segundo plano, el texto dentro de imágenes pequeñas (logos, capturas). */
   ocrImages: boolean
+  /** Tipos de archivo que no entran en las búsquedas. Vacío = todos. El índice no cambia. */
+  excludedKinds: FileKind[]
   /** Ya se hizo la bienvenida y la puesta en marcha inicial. */
   onboarded: boolean
+  /** Niebla, relámpagos lejanos y algún fantasma de fondo. */
+  ambience: boolean
+  /** Ya se hizo (o se saltó) el recorrido guiado por las secciones. */
+  tourDone: boolean
   /** Modelo de lenguaje: local o de un servicio externo. */
   ai: AiSettings
 }
@@ -36,7 +42,7 @@ export interface OllamaStatus {
   models: string[]
   embedModel: string
   embedModelInstalled: boolean
-  /** Modelo de chat en uso, si hay uno. */
+  /** Modelo local de respuestas instalado, si hay uno (se informa aunque las respuestas las dé un servicio externo). */
   chatModel?: string
   /** Pasos pendientes para dejarlo listo. La interfaz los traduce. */
   hints: OllamaHint[]
@@ -75,6 +81,12 @@ export interface AppInfo {
   dataDir: string
 }
 
+export interface PresentResult {
+  /** `null` si el usuario canceló. */
+  savedTo: string | null
+  format?: 'docx' | 'xlsx' | 'md'
+}
+
 export interface ExportResult {
   /** `null` si el usuario canceló. */
   savedTo: string | null
@@ -90,6 +102,8 @@ export const IPC = {
   openFile: 'medium:open-file',
   showInFolder: 'medium:show-in-folder',
   exportFile: 'medium:export-file',
+  bringToPresent: 'medium:bring-to-present',
+  mcpConfig: 'medium:mcp-config',
   getSettings: 'medium:get-settings',
   setSettings: 'medium:set-settings',
   addFolder: 'medium:add-folder',
@@ -104,6 +118,7 @@ export const IPC = {
   aiSave: 'medium:ai-save',
   aiForgetKey: 'medium:ai-forget-key',
   recentChanges: 'medium:recent-changes',
+  fileKinds: 'medium:file-kinds',
   trashList: 'medium:trash-list',
   trashRestore: 'medium:trash-restore',
   trashReveal: 'medium:trash-reveal',
@@ -116,6 +131,7 @@ export const IPC = {
   ollamaStatus: 'medium:ollama-status',
   appInfo: 'medium:app-info',
   minimize: 'medium:minimize',
+  toggleMaximize: 'medium:toggle-maximize',
   quit: 'medium:quit',
   /** Eventos del proceso principal hacia la interfaz. */
   onIndexState: 'medium:on-index-state',
@@ -169,6 +185,12 @@ export interface FolderSuggestion {
 }
 
 // --- Cambios detectados -----------------------------------------------------
+
+/** Cuántos archivos de un tipo hay en el índice. */
+export interface KindCount {
+  kind: FileKind
+  count: number
+}
 
 export type ChangeKind = 'added' | 'modified' | 'removed'
 
@@ -243,6 +265,10 @@ export interface MediumApi {
   openFile(path: string): Promise<void>
   showInFolder(path: string): Promise<void>
   exportFile(path: string): Promise<ExportResult>
+  /** "Traer al presente": guarda una copia en un formato de hoy (DOCX, XLSX o Markdown) en la carpeta que se elija. */
+  bringToPresent(path: string): Promise<PresentResult>
+  /** Configuración lista para pegar en el `mcp.json` de un agente (Kiro, Claude Desktop…). */
+  mcpConfig(): Promise<string>
   getSettings(): Promise<Settings>
   setSettings(patch: Partial<Settings>): Promise<Settings>
   /** Abre el selector de carpetas del sistema y agrega la elegida. */
@@ -255,6 +281,8 @@ export interface MediumApi {
   forgetAll(): Promise<void>
   ollamaStatus(): Promise<OllamaStatus>
   appInfo(): Promise<AppInfo>
+  /** Tipos de archivo que hay en el índice, con su cantidad (para elegir cuáles incluir en las búsquedas). */
+  fileKinds(): Promise<KindCount[]>
   /** Lo último que OUIJA detectó: archivos nuevos, modificados y eliminados. */
   recentChanges(limit?: number): Promise<ChangeDto[]>
   /** Archivos que hay hoy en la papelera, con lo que OUIJA sabe de ellos. */
@@ -295,6 +323,8 @@ export interface MediumApi {
   onSetupState(listener: (state: SetupState) => void): () => void
   /** Minimiza la ventana a la barra de tareas o al dock. */
   minimize(): void
+  /** Maximiza la ventana, o la devuelve a su tamaño si ya estaba maximizada. */
+  toggleMaximize(): void
   /** Cierra OUIJA por completo. */
   quit(): void
   /** Suscripción a cambios del estado de indexación. Devuelve la función para cancelar. */

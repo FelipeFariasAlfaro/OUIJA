@@ -1,6 +1,6 @@
 # How OUIJA was built with Kiro
 
-OUIJA is a desktop app (Windows and Linux) that finds files by meaning using local models, resurrects old or damaged formats and finds digital "ghosts". It was built from scratch during the Kiroween 2026 period (Resurrection category).
+OUIJA resurrects **desktop search**, the idea Google Desktop Search (2004–2011) took to its grave, and reimagines it with local AI: it finds files by meaning, resurrects dead formats (WordPerfect, WordStar, DOS text), looks inside old backups, brings files back from the trash and exposes all of it to AI agents through MCP. Desktop app for Windows and Linux, built from scratch during the Kiroween 2026 period (Resurrection category).
 
 ## What was used and what was not
 
@@ -8,9 +8,10 @@ OUIJA is a desktop app (Windows and Linux) that finds files by meaning using loc
 |---|---|
 | Specs | Yes: `.kiro/specs/medium/` (requirements, design, tasks). |
 | Steering | Yes: `.kiro/steering/` (product, technical conventions, UI style). |
-| Hooks | Yes, one: typecheck on saving code. |
+| Hooks | Yes: typecheck and tests on saving code. |
 | Property-based tests (PBT) | Yes, with `fast-check`: the properties listed in the spec. |
-| MCP, Powers, Kiro Crew, custom agents | Not used in this project. |
+| MCP | Yes, in both directions: OUIJA **is** an MCP server, and Kiro uses it (`.kiro/settings/mcp.json`). |
+| Powers, Kiro Crew, custom agents | Not used in this project. |
 
 ## Specs: from requirement to test
 
@@ -27,6 +28,12 @@ Compared with "vibe coding", the spec gave two concrete things: a definition of 
 ## Hook
 
 `typecheck-on-save` runs `npm run typecheck` and the tests whenever a `.ts` or `.tsx` file is saved. It caught contract regressions early when the shape of `Hit` and `IndexedDoc` changed.
+
+## MCP: Kiro talking to OUIJA
+
+OUIJA ships a read-only MCP server over stdio (`ask_ouija`, `read_resurrected`, `list_ghosts`, `find_person`, `recent_changes`). It reuses the same core as the app in a *passive* mode: it only reads the index the app keeps up to date (SQLite in WAL mode, so both can run at once), never starts watchers, never touches the user's files and answers without a language model, because the caller already is one.
+
+The workspace includes `.kiro/settings/mcp.json` pointing at the dev build (disabled by default; enable it after `npm run build`). With it, Kiro can answer "what did my 2008 thesis draft say about Rosa?" by calling `ask_ouija`, getting back a WordPerfect file inside a ZIP backup, and reading it with `read_resurrected`, which converts or rescues the text on the fly. That closes the loop of the resurrection: a 1990s file format that no program opens becomes context for a 2026 agent. The e2e suite drives the real server over stdio while the app is open.
 
 ## Property-based tests
 
@@ -53,8 +60,8 @@ What they found that example-based tests would not have:
 
 ## Verification with the real app
 
-Besides the 365 unit and property tests, `npm run e2e` (45 tests) launches the real Electron app against real Ollama (`bge-m3` and `qwen3.5:4b`) over `fixtures/chaos/`: it checks renderer isolation, network blocking, search inside a ZIP, WordPerfect rescue, repair of damaged text, the external-provider flow against a simulated server, and the Gallows against a fake trash.
+Besides the 373 unit and property tests, `npm run e2e` (53 tests) launches the real Electron app against real Ollama (`bge-m3` and `qwen3.5:4b`) over `fixtures/chaos/`: it checks renderer isolation, network blocking, search inside a ZIP, WordPerfect rescue, repair of damaged text, the external-provider flow against a simulated server, the Gallows against a fake trash, the MCP server over stdio, *Bring to the present* and the six interface languages.
 
 ## What I would do differently
 
-Use an MCP server to expose the search to other agents, and a hook that runs the e2e tests before packaging.
+Add a hook that runs the e2e tests before packaging, and try Kiro Crew to translate the interface in parallel with feature work.

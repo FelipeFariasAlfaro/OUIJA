@@ -99,7 +99,13 @@ describe('modelo de lenguaje externo', () => {
     await page.screenshot({ path: join(tmpdir(), 'medium-ai-modelos.png') })
     await page.getByRole('button', { name: 'Probar y guardar' }).click()
 
-    await page.getByText('Usando Claude · claude-opus-4-1').waitFor()
+    // Ajustes dice qué IA hace cada cosa: las respuestas las da Claude; la búsqueda, el equipo.
+    const roles = page.getByTestId('ai-roles')
+    await expect.poll(() => roles.innerText()).toMatch(/Respuestas a tus preguntas\s*Servicio externo\s*Claude · claude-opus-4-1/)
+    expect(await roles.innerText()).toMatch(/Búsqueda por significado\s*(En este equipo|Falta el modelo)/)
+    expect(await roles.innerText()).not.toMatch(/Personas y resúmenes\s*Servicio externo/)
+    expect(await page.getByText('Respuestas con Claude').count()).toBe(1)
+    expect(await page.getByText('Todo local').count()).toBe(0)
     expect(await call<AiConfig>('aiConfig')).toMatchObject({ mode: 'remote', provider: 'anthropic', model: 'claude-opus-4-1', hasKey: true, remoteDocuments: false })
   })
 
@@ -157,7 +163,8 @@ describe('modelo de lenguaje externo', () => {
     await page.getByRole('button', { name: 'Cambiar' }).click()
     await page.getByRole('radio', { name: /En este equipo/ }).click()
     await page.getByRole('button', { name: 'Usar el modelo local' }).click()
-    await page.getByText('Usando el modelo local').waitFor()
+    await expect.poll(() => page.getByTestId('ai-roles').innerText()).not.toContain('Claude')
+    await expect.poll(() => page.getByText('Todo local').count()).toBe(1)
     expect(await call<AiConfig>('aiConfig')).toMatchObject({ mode: 'local', keyedProviders: ['anthropic'] })
 
     await page.getByRole('button', { name: /Quitar la clave de Claude/ }).click()

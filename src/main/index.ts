@@ -8,6 +8,7 @@ import { MediumCore } from './core/medium'
 import { SecretStore } from './core/secrets'
 import { SettingsStore } from './core/settings'
 import { registerIpc } from './ipc'
+import { runMcp } from './mcp/run'
 import { registerShortcut, type ShortcutResult } from './shortcut'
 import { createTray, updateTrayMenu, type TrayActions } from './tray'
 import { hardenSession, PaletteWindow, rendererFileFor } from './window'
@@ -18,7 +19,28 @@ if (process.platform === 'linux' && process.env['XDG_SESSION_TYPE'] === 'wayland
 }
 if (process.env['MEDIUM_USER_DATA']) app.setPath('userData', process.env['MEDIUM_USER_DATA']) // pruebas
 
-if (!app.requestSingleInstanceLock()) app.quit()
+
+// `ouija --mcp`: servidor MCP por stdio para agentes (Kiro, Claude Desktop…), sin ventana. Convive con la
+// aplicación abierta: solo lee el índice que ella mantiene.
+const MCP_MODE = process.argv.includes('--mcp')
+if (MCP_MODE) {
+  app.disableHardwareAcceleration()
+  runMcp(process.env['OUIJA_DATA_DIR'] || app.getPath('userData'), app.getVersion(), (code) => app.exit(code)).catch((error: unknown) => {
+    console.error('OUIJA MCP:', error instanceof Error ? error.message : error)
+    app.exit(1)
+  })
+} else if (!app.requestSingleInstanceLock()) app.quit()
+
+/** Configuración para el `mcp.json` de un agente, con las rutas reales de esta instalación. */
+function mcpConfig(): string {
+  const dataDir = app.getPath('userData')
+  const appImage = process.env['APPIMAGE']
+  // En un AppImage la ruta interna cambia en cada arranque: se usa el propio AppImage con `--mcp`.
+  const server = appImage
+    ? { command: appImage, args: ['--mcp'], env: { OUIJA_DATA_DIR: dataDir } }
+    : { command: process.execPath, args: [join(app.getAppPath(), 'out', 'main', 'mcp.js')], env: { ELECTRON_RUN_AS_NODE: '1', OUIJA_DATA_DIR: dataDir } }
+  return JSON.stringify({ mcpServers: { ouija: server } }, null, 2)
+}
 
 let palette: PaletteWindow
 let tray: Tray | null = null
@@ -32,6 +54,7 @@ function applyShortcut(accelerator: string): void {
 const notifyShown = (): void => palette.send(IPC.onShown)
 
 app.whenReady().then(async () => {
+  if (MCP_MODE) return
   app.setName('OUIJA')
   hardenSession()
 
@@ -76,6 +99,7 @@ app.whenReady().then(async () => {
     appFileUrl: pathToFileURL(rendererFile).href,
     devServerUrl,
     getSettings: () => settings.value,
+    mcpConfig,
     appInfo: (): AppInfo => ({
       version: app.getVersion(),
       platform: process.platform,

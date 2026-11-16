@@ -51,7 +51,9 @@ describe('ventana y seguridad', () => {
       const w = BrowserWindow.getAllWindows()[0]
       return { visible: w.isVisible(), alwaysOnTop: w.isAlwaysOnTop(), resizable: w.isResizable(), minimizable: w.isMinimizable(), title: w.getTitle(), size: w.getSize() }
     })
-    expect(props).toMatchObject({ visible: true, alwaysOnTop: false, resizable: false, minimizable: true, title: 'OUIJA', size: [760, 580] })
+    expect(props).toMatchObject({ visible: true, alwaysOnTop: false, resizable: true, minimizable: true, title: 'OUIJA' })
+    expect(props.size[0]).toBeGreaterThanOrEqual(720)
+    expect(props.size[1]).toBeGreaterThanOrEqual(520)
   })
 
   it('tiene botones para minimizar y cerrar', async () => {
@@ -68,7 +70,7 @@ describe('ventana y seguridad', () => {
     }))
     expect(surface).toMatchObject({ require: 'undefined', process: 'undefined', ipc: 'undefined' })
     expect(surface.keys).toEqual(
-      ['addFolder', 'addSuggestedFolder', 'aiConfig', 'aiForgetKey', 'aiListModels', 'aiSave', 'aiValidate', 'appInfo', 'ask', 'cancelIndex', 'decideNames', 'exportFile', 'finishOnboarding', 'forgetAll', 'getSettings', 'ghosts', 'indexNow', 'indexState', 'minimize', 'ollamaStatus', 'onChanges', 'onIndexState', 'onSetupState', 'onShown', 'openFile', 'people', 'quit', 'recentChanges', 'removeFolder', 'setSettings', 'setupCancel', 'setupStart', 'setupState', 'showInFolder', 'suggestFolders', 'timeline', 'trashList', 'trashReveal', 'trashRestore'].sort()
+      ['addFolder', 'addSuggestedFolder', 'aiConfig', 'aiForgetKey', 'aiListModels', 'aiSave', 'aiValidate', 'appInfo', 'ask', 'bringToPresent', 'cancelIndex', 'decideNames', 'exportFile', 'fileKinds', 'finishOnboarding', 'forgetAll', 'getSettings', 'ghosts', 'indexNow', 'indexState', 'mcpConfig', 'minimize', 'ollamaStatus', 'onChanges', 'onIndexState', 'onSetupState', 'onShown', 'openFile', 'people', 'quit', 'recentChanges', 'removeFolder', 'setSettings', 'setupCancel', 'setupStart', 'setupState', 'showInFolder', 'suggestFolders', 'timeline', 'toggleMaximize', 'trashList', 'trashReveal', 'trashRestore'].sort()
     )
   })
 
@@ -179,6 +181,18 @@ describe('navegación', () => {
 })
 
 describe('salir', () => {
+  it('habla seis idiomas: la interfaz cambia al instante', async () => {
+    const tabs = async () => page.evaluate(() => [...document.querySelectorAll('nav button')].map((b) => b.textContent).join(' '))
+    const expected = { pt: 'Buscar Fantasmas Pessoas Forca Ajustes', fr: 'Chercher Fantômes Personnes Potence Réglages', ja: '検索 幽霊 人物 絞首台 設定', zh: '搜索 幽灵 人物 绞刑架 设置', en: 'Search Ghosts People Gallows Settings' }
+    for (const [lang, text] of Object.entries(expected)) {
+      await page.evaluate((l) => (window as unknown as { medium: { setSettings(p: object): Promise<unknown> } }).medium.setSettings({ lang: l }), lang)
+      await page.reload()
+      await expect.poll(tabs).toBe(text)
+    }
+    await page.evaluate(() => (window as unknown as { medium: { setSettings(p: object): Promise<unknown> } }).medium.setSettings({ lang: 'es' }))
+    await page.reload()
+    await expect.poll(tabs).toBe('Buscar Fantasmas Personas Patíbulo Ajustes')
+  })
   it('el botón × cierra OUIJA por completo', async () => {
     const closed = new Promise<void>((ok) => app.process().once('exit', () => ok()))
     // Clic desde el DOM: la prueba anterior dejó a Playwright esperando una navegación bloqueada.

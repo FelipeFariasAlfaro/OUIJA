@@ -32,7 +32,7 @@ function MatchCard({
   query: string
   selected: boolean
   onHover: () => void
-  onAction: (action: 'open' | 'show' | 'export', match: Match) => void
+  onAction: (action: 'open' | 'show' | 'export' | 'present', match: Match) => void
 }) {
   const { lang, t, fmtDate } = useI18n()
   return (
@@ -74,6 +74,11 @@ function MatchCard({
             </span>
           )}
           <div className={`ml-auto flex gap-1.5 transition-opacity ${selected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+            {match.resurrected && (
+              <span title={t.presentHelp}>
+                <ActionButton onClick={() => onAction('present', match)}>✦ {t.present}</ActionButton>
+              </span>
+            )}
             {match.container && <ActionButton onClick={() => onAction('export', match)}>{t.export}</ActionButton>}
             <ActionButton onClick={() => onAction('show', match)}>{match.container ? t.showContainer : t.showFolder}</ActionButton>
             <ActionButton primary onClick={() => onAction('open', match)}>
@@ -136,11 +141,14 @@ export default function SearchView({ hasFolders, onAddFolder, changesKey, onGall
   const matches = useMemo(() => result?.matches ?? [], [result])
 
   const act = useCallback(
-    async (action: 'open' | 'show' | 'export', match: Match) => {
+    async (action: 'open' | 'show' | 'export' | 'present', match: Match) => {
       try {
         if (action === 'open') await api.openFile(match.path)
         else if (action === 'show') await api.showInFolder(match.path)
-        else {
+        else if (action === 'present') {
+          const r = await api.bringToPresent(match.path)
+          if (r.savedTo) setNotice(`${t.presented((r.format ?? 'md').toUpperCase())} ${r.savedTo}`)
+        } else {
           const r = await api.exportFile(match.path)
           if (r.savedTo) setNotice(`${t.exported} ${r.savedTo}`)
         }
@@ -166,7 +174,7 @@ export default function SearchView({ hasFolders, onAddFolder, changesKey, onGall
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="mx-4 flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 focus-within:border-violet-400/60">
+      <div data-tour="search" className="mx-4 flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 focus-within:border-violet-400/60">
         <GhostIcon className="h-6 w-6 shrink-0 text-violet-300" />
         <input
           ref={input}
@@ -177,6 +185,28 @@ export default function SearchView({ hasFolders, onAddFolder, changesKey, onGall
           spellCheck={false}
           className="w-full bg-transparent text-[15px] text-zinc-100 outline-none placeholder:text-zinc-500"
         />
+        {(query || result) && (
+          <button
+            type="button"
+            title={t.clearSearch}
+            aria-label={t.clearSearch}
+            onClick={() => {
+              seq.current++ // descarta una respuesta que aún no llega
+              setQuery('')
+              setAsked('')
+              setResult(null)
+              setLoading(false)
+              setNotice(null)
+              setSelected(0)
+              input.current?.focus()
+            }}
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-zinc-500 transition-colors hover:bg-white/10 hover:text-zinc-200"
+          >
+            <svg viewBox="0 0 12 12" className="h-3 w-3" aria-hidden="true">
+              <path d="M2.5 2.5l7 7M9.5 2.5l-7 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          </button>
+        )}
       </div>
 
       {notice && (

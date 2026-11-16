@@ -14,6 +14,7 @@ export { carveText } from './carve'
 export { decodeBest, repairMojibake, scoreText } from './encoding'
 export { htmlToText } from './formats'
 export { rtfToText } from './rtf'
+export { convertLegacyToModern } from './legacy'
 export { ExtractError } from './types'
 export type { ExtractInput, ExtractMethod, ExtractResult } from './types'
 
@@ -26,7 +27,8 @@ export const TEXT_EXTENSIONS: readonly string[] = [
   'tsv'
 ]
 export const LEGACY_EXTENSIONS = ['doc', 'dot', 'wpd', 'wps', 'wri', 'ws', 'lwp', 'sdw'] as const
-const SHEET_LEGACY = ['xls', 'xlsb']
+export const SHEET_LEGACY_EXTENSIONS = ['xls', 'xlsb'] as const
+const SHEET_LEGACY: string[] = [...SHEET_LEGACY_EXTENSIONS]
 const OFFICE_XML = ['docx', 'dotx', 'xlsx', 'xlsm', 'pptx', 'ppsx', 'odt', 'ods', 'odp', 'epub']
 const OTHER = ['pdf', 'rtf', 'html', 'htm', 'xhtml', 'mhtml', 'svg', 'eml']
 

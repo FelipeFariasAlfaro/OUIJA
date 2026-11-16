@@ -1,34 +1,65 @@
 # OUIJA
 
-> Summon your forgotten files. Resurrect dead file formats, search by meaning and hunt digital ghosts. Everything runs locally.
+> **Desktop search died in 2011. OUIJA brings it back from the dead**, with the AI of today, running entirely on your computer.
 
-Built for the Kiroween Hackathon 2026 (**Resurrection** category). Desktop app for Windows and Linux.
+OUIJA is a desktop app for Windows and Linux that resurrects a dead technology, personal desktop search, and the files it left behind: documents in formats no program opens anymore, backups nobody remembers and files sent to the trash. You ask in your own words; the spirits answer with where the file is.
 
-## What it does
+## What we resurrect
 
-1. **Resurrection**: converts old formats (.wpd, .wps, .doc), recovers text from binaries, repairs corrupted encodings and looks inside your ZIP backups. Every file of any type can be found by name, folder and type (images, audio, video, code…).
-2. **Local semantic search**: ask in plain language ("where is the poem for Rosa?") and get the file path, even inside a ZIP. Embeddings and the language model run on your machine through Ollama.
-3. **Ghost autopsy**: detects duplicates, versions and forgotten documents, and tells the story of each one as an obituary.
-4. **People and timeline**: reconstructs who appears in your files and when.
-5. **Changes and Gallows**: OUIJA notices new, modified and deleted files. The *Gallows* tab shows what is in the trash, and *Resurrection* brings files back (Linux and Windows; it never overwrites anything).
+**Google Desktop Search** (2004–2011) promised to search your PC the way Google searched the web. Google discontinued it in 2011 (the same era took Windows XP's search dog, Rover), and personal files were left to the mercy of folder names. Everything moved to the cloud, but our files did not: they are still there, scattered across disks, old backups and formats no program opens anymore.
 
-The app lives in the system tray. A global shortcut opens a search palette with results and buttons to open a file or show its folder.
+OUIJA resurrects that idea and reimagines it with what was impossible in 2011:
+
+| Google Desktop (2004–2011) | OUIJA (2026) |
+|---|---|
+| Keyword search | Search by **meaning**, in your own words, with local embeddings |
+| Indexed modern files only | **Resurrects dead formats**: WordPerfect, WordStar, Works, Write, Lotus, DOS text (CP437/CP850), broken encodings |
+| Stopped at the ZIP | Looks **inside backups** (ZIP; 7z, RAR, ARJ, LZH with 7-Zip) |
+| "Search Across Computers" copied your index to Google's servers | **Everything local**: no cloud, no telemetry |
+| A list of links | An answer that cites only files that exist, plus **ghosts**, **people** and **timelines** |
+| Dead in 2011 | Open to **AI agents** through MCP |
+
+And it resurrects files in three more ways:
+
+- **Bring to the present:** a 1994 WordPerfect thesis comes back as a `.docx` (or clean UTF-8 Markdown when the file is too damaged), saved where you choose. The original is never touched.
+- **The Gallows:** what you sent to the trash, with what OUIJA knew about it. From *Resurrection* you bring it back to its original place, never overwriting anything (Linux and Windows).
+- **Ghosts:** forgotten files, exact copies and near-identical versions, each with its obituary.
+
+## Features
+
+1. **Ask the board.** "Where is the poem I wrote for Rosa?" → the 2019 document and its 2008 draft **inside a backup**, marked *Resurrected*, with its confidence level.
+2. **Resurrection of dead formats.** LibreOffice conversion when available; otherwise forensic rescue from the raw bytes, encoding detection (CP437, CP850, Latin-1) and mojibake repair ("Ã±" → "ñ").
+3. **Every file type is findable** by name, folder and type (images, audio, video, code…); small images are read with OCR.
+4. **Ghost autopsy**, **People / Specters** with timelines (merge "Rosita" with "Rosa"), and **live change detection**.
+5. **MCP server.** Kiro, Claude Desktop or any MCP agent can ask OUIJA where your files are and read the ones it resurrected. Settings shows the configuration ready to paste.
+6. **Six languages:** Spanish, English, Portuguese, French, Japanese and Chinese.
+7. **A haunted interface** that serves the function: séance metaphor, storm and ghosts on the welcome screen, subtle fog and distant lightning in the app, and a guided tour.
 
 ## Privacy
 
-The index lives on your computer. No document leaves it. There are no network calls except to Ollama on `localhost` and, only if you choose it, to the language-model provider you configure (see below).
+The index lives on your computer and no document leaves it. Network calls go only to Ollama on `localhost` and, only if you choose it, to the language-model provider you configure. Search by meaning is always local; an external provider receives only your question and short snippets of the candidate files. API keys are encrypted with the system keystore and never reach the UI.
 
-## Stack
+## Use it from an AI agent (MCP)
 
-Electron, React, TypeScript, Tailwind, SQLite (FTS5 + `sqlite-vec`), Ollama, Tesseract. GLIA is an optional adapter behind the `MemoryStore` interface (not implemented in this version).
+OUIJA ships a read-only [Model Context Protocol](https://modelcontextprotocol.io) server over stdio. Open **Settings → Connect AI agents (MCP)**, copy the configuration and paste it into your agent's `mcp.json` (for Kiro: `.kiro/settings/mcp.json` or `~/.kiro/settings/mcp.json`). On Linux with the AppImage it looks like:
 
-## First run
+```json
+{
+  "mcpServers": {
+    "ouija": { "command": "/path/to/OUIJA-0.2.0.AppImage", "args": ["--mcp"] }
+  }
+}
+```
 
-On first launch you pick a language (Spanish or English), see how it works, and the app sets itself up: it uses the Ollama you already have or downloads its own (verified with SHA-256, no administrator rights) and pulls the `bge-m3` (meaning) and `qwen3.5:4b` (answers) models. That is about 6 GB, once, and the only thing that uses the internet. On low-memory machines it skips the answer model and stays in light mode.
+| Tool | What it does |
+|---|---|
+| `ask_ouija` | Finds files by meaning, in any language, including inside backups and old formats |
+| `read_resurrected` | Reads a file as OUIJA recovers it (converted, rescued, encoding repaired). Only indexed files |
+| `list_ghosts` | Forgotten files, duplicates and versions, with their obituary |
+| `find_person` | Timeline of the files that mention someone |
+| `recent_changes` | What was recently added, modified or deleted |
 
-**Language model:** during onboarding you choose whether answers come from a local model (private) or an external service (Claude, OpenAI, Gemini or DeepSeek, with your own key: pick a provider, paste the key, it is validated, choose one of the models that key can use, and it is tested before saving). You can change it later in Settings. Semantic search is always local; only your question and short snippets of the candidate files are sent to the service. The key is stored encrypted with your system's keystore.
-
-Optional, to read more formats (onboarding shows the command for each): LibreOffice (old formats), Tesseract and Poppler (OCR), 7-Zip (RAR, 7z, ARJ, LZH).
+The server runs alongside the open app and only reads the index; it never modifies, moves or deletes anything.
 
 ## Install
 
@@ -37,13 +68,17 @@ Download the latest build from the [Releases](https://github.com/FelipeFariasAlf
 - **Linux:** download `OUIJA-<version>.AppImage`, make it executable (`chmod +x`) and run it. A `.deb` is also published (`sudo apt install ./ouija_<version>_amd64.deb`).
 - **Windows:** run `OUIJA-Setup-<version>.exe`. It creates desktop and Start menu shortcuts.
 
-When it opens you get a normal window. `–` minimizes it to the taskbar or dock; one click brings it back. You can also open it from the tray icon, with the shortcut `Ctrl/Cmd + Shift + Space`, or by launching OUIJA again. `Esc` minimizes and `×` quits. While it is open (even minimized) it watches your folders and keeps the index up to date.
+On first launch you pick a language, see how it works, choose a local or external language model, and the app sets itself up: it uses the Ollama you already have or downloads its own (verified with SHA-256, no administrator rights) and pulls `bge-m3` (meaning) and `qwen3.5:4b` (answers). That is about 6 GB, once, and the only thing that uses the internet. Optional add-ons read more formats: LibreOffice (old formats and *Bring to the present* as DOCX), Tesseract and Poppler (OCR), 7-Zip (RAR, 7z, ARJ, LZH).
 
-On GNOME the tray icon needs the AppIndicator extension (Ubuntu ships it enabled). On Wayland the global shortcut depends on the desktop portal; if it is unavailable, Settings says so.
+`–` minimizes to the taskbar, `×` quits, and `Ctrl/Cmd + Shift + Space` brings it back. On GNOME the tray icon needs the AppIndicator extension; on Wayland the global shortcut depends on the desktop portal.
 
 ## Demo
 
-`node scripts/make-fixtures.mjs` creates `fixtures/chaos/`, a messy folder with an RTF poem, a 2008 ZIP backup with DOS text and a WordPerfect file, a damaged diary, contracts, an image and an audio file. The script is in `docs/DEMO.md`. How it was built with Kiro: `docs/KIRO_WRITEUP.md`.
+`node scripts/make-fixtures.mjs` creates `fixtures/chaos/`: an RTF poem, a 2008 ZIP backup with DOS text and a WordPerfect thesis, a damaged diary, contracts, an image and an audio file. The video script is in `docs/DEMO.md`; how it was built with Kiro is in `docs/KIRO_WRITEUP.md`.
+
+## Stack
+
+Electron, React, TypeScript, Tailwind, SQLite (FTS5 + `sqlite-vec`), Ollama, LibreOffice, Tesseract. Optional GLIA adapter behind the `MemoryStore` interface.
 
 ## Development
 
@@ -52,18 +87,12 @@ npm install
 npm run dev        # development
 npm test           # unit and property tests
 npm run e2e        # real app with Ollama (needs a display)
-npm run package    # build an installer for your OS into release/
+npm run package    # installer for your OS into release/
 ```
 
-Packaging must run on the target OS so the right native library is included (the release workflow does this on GitHub Actions).
+`.github/workflows/release.yml` runs on every push to `main`: typecheck, lint and tests, then the Linux and Windows installers on their own runners, published as a GitHub release `v<version>` from `package.json` (if that release already exists, the next free patch number).
 
-## Releases
-
-`.github/workflows/release.yml` runs on every push to `main`: it checks types, lint and tests, builds the Linux and Windows installers on their own runners and publishes them as a GitHub release tagged `v<major>.<minor>.<run number - 1>` (the first run publishes `v0.1.0`). The base version comes from `package.json`.
-
-## Status
-
-Under construction. Specification in `.kiro/specs/medium/`.
+Specification, steering and hooks are in `.kiro/`.
 
 ## License
 

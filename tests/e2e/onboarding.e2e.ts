@@ -91,11 +91,38 @@ describe('bienvenida', () => {
     await expect.poll(async () => (await call<{ indexed: number; phase: string }>('indexState')).indexed, { timeout: 90_000 }).toBeGreaterThanOrEqual(1)
   })
 
+  it('al terminar, un recorrido guiado señala el contador y cada sección; Esc no minimiza', async () => {
+    const tour = page.getByTestId('tour')
+    await tour.waitFor({ timeout: 10_000 })
+    const titles: string[] = []
+    await page.waitForTimeout(700)
+    await page.screenshot({ path: '/tmp/tour-first.png' })
+    await page.keyboard.press('Escape') // no debe minimizar ni cerrar el recorrido sin guardar: lo salta
+    await expect.poll(() => tour.count()).toBe(0)
+    expect(await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].isMinimized())).toBe(false)
+    await expect.poll(async () => (await call<Settings>('getSettings')).tourDone).toBe(true)
+    // Repetirlo desde Ajustes y recorrerlo entero.
+    await page.getByRole('button', { name: 'Ajustes', exact: true }).click()
+    await page.getByRole('button', { name: 'Repetir el recorrido' }).click()
+    await tour.waitFor()
+    for (let n = 0; n < 10 && (await tour.count()) > 0; n++) {
+      const title = await tour.locator('#tour-title').innerText()
+      titles.push(title)
+      const last = await tour.getByRole('button', { name: 'Que empiece la sesión' }).count()
+      await tour.getByRole('button', { name: last ? 'Que empiece la sesión' : 'Siguiente' }).click()
+      // Esperar a que cambie de paso (o se cierre) antes de leer el siguiente.
+      await expect.poll(async () => ((await tour.count()) === 0 ? '' : await tour.locator('#tour-title').innerText())).not.toBe(title)
+    }
+    expect(titles).toEqual(expect.arrayContaining(['Pregúntale a la tabla', 'Fantasmas', 'Personas / Espectros', 'Patíbulo', 'Ajustes', 'Todo queda aquí']))
+    expect(await tour.count()).toBe(0)
+  })
   it('la próxima vez no vuelve a aparecer', async () => {
     await app.close()
     app = await electron.launch({ args: [resolve('.'), '--no-sandbox'], env: { ...process.env, MEDIUM_USER_DATA: data, HOME: home, ELECTRON_RENDERER_URL: '' } })
     page = await app.firstWindow()
     await page.getByPlaceholder(/Pregunta por un archivo/).waitFor({ timeout: 30_000 })
     expect(await page.getByRole('heading', { name: /Bienvenido/ }).count()).toBe(0)
+    await page.waitForTimeout(1500)
+    expect(await page.getByTestId('tour').count()).toBe(0)
   })
 })

@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "ouija": {
+      "command": "node",
+      "args": ["out/main/mcp.js"],
+      "disabled": true,
+      "autoApprove": ["ask_ouija", "read_resurrected", "list_ghosts", "find_person", "recent_changes"]
+    }
+  }
+}

@@ -2,9 +2,11 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import type { Settings } from '@shared/ipc'
 import type { Lang } from '@shared/types'
+import { LANG_IDS, LANG_INFO, langFromLocale } from '@shared/langs'
 import type { AiConfig } from '@shared/ai'
 import { api } from '../api'
 import AiWizard from '../ai/AiWizard'
+import Storm from './Storm'
 import WindowControls from '../components/WindowControls'
 import { GhostIcon } from '../components/ui'
 import { I18nContext, makeI18n } from '../i18n'
@@ -23,12 +25,8 @@ const LAST_SLIDE = SLIDES.length
 const AI = LAST_SLIDE + 1
 const SETUP = LAST_SLIDE + 2
 
-const LANGS: { id: Lang; name: string; hint: string }[] = [
-  { id: 'es', name: 'Español', hint: 'Continuar en español' },
-  { id: 'en', name: 'English', hint: 'Continue in English' }
-]
-
-const detectLang = (): Lang => (navigator.language.toLowerCase().startsWith('en') ? 'en' : 'es')
+const LANGS = LANG_IDS.map((id) => ({ id, ...LANG_INFO[id] }))
+const detectLang = (): Lang => langFromLocale(navigator.language)
 
 /** Bienvenida de la primera vez: idioma, cómo funciona y puesta en marcha. */
 export default function Onboarding({ settings, onDone }: { settings: Settings; onDone: (s: Settings) => void }) {
@@ -74,12 +72,13 @@ export default function Onboarding({ settings, onDone }: { settings: Settings; o
   return (
     <I18nContext.Provider value={i18n}>
       <div
-        className="relative flex h-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0d0d16]"
+        className="relative flex h-full flex-col overflow-hidden bg-[#08070d]"
         style={{
           backgroundImage: 'radial-gradient(600px 260px at 50% -80px, rgba(139,92,246,.28), transparent 70%), radial-gradient(420px 220px at 100% 100%, rgba(99,102,241,.12), transparent 70%)'
         }}
       >
-        <header className="flex items-center px-4 pb-2 pt-3.5 [-webkit-app-region:drag]">
+        <Storm />
+        <header className="relative z-10 flex items-center px-4 pb-2 pt-3.5 [-webkit-app-region:drag]">
           <div className="flex items-center gap-2 text-sm font-semibold text-violet-200">
             <GhostIcon className="h-5 w-5" /> OUIJA
           </div>
@@ -89,13 +88,13 @@ export default function Onboarding({ settings, onDone }: { settings: Settings; o
         </header>
 
         {step === 0 && (
-          <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-8 pb-8">
+          <div className="relative z-10 flex min-h-0 flex-1 flex-col items-center justify-center px-8 pb-8">
             <motion.div animate={{ y: [0, -8, 0] }} transition={{ repeat: Infinity, duration: 3 }}>
               <GhostIcon className="h-20 w-20 text-violet-300 drop-shadow-[0_0_28px_rgba(167,139,250,.55)]" />
             </motion.div>
             <h1 className="mt-4 text-2xl font-semibold text-zinc-50">{t.welcomeTitle}</h1>
             <p className="mt-1 text-sm text-zinc-400">{t.welcomeSub}</p>
-            <div className="mt-6 grid w-full max-w-md grid-cols-2 gap-3" role="radiogroup" aria-label="Idioma / Language">
+            <div className="mt-6 grid w-full max-w-xl grid-cols-3 gap-3" role="radiogroup" aria-label="Idioma / Language">
               {LANGS.map((l) => (
                 <button
                   key={l.id}
@@ -103,7 +102,8 @@ export default function Onboarding({ settings, onDone }: { settings: Settings; o
                   role="radio"
                   aria-checked={lang === l.id}
                   onClick={() => choose(l.id)}
-                  className={`rounded-2xl border px-4 py-5 text-left transition-colors ${lang === l.id ? 'border-violet-400/60 bg-violet-400/10' : 'border-white/10 hover:bg-white/[0.04]'}`}
+                  lang={LANG_INFO[l.id].locale}
+                  className={`rounded-2xl border px-4 py-4 text-left transition-colors ${lang === l.id ? 'border-violet-400/60 bg-violet-400/10' : 'border-white/10 hover:bg-white/[0.04]'}`}
                 >
                   <div className="text-lg font-semibold text-zinc-100">{l.name}</div>
                   <div className="mt-0.5 text-[12px] text-zinc-500">{l.hint}</div>
@@ -117,7 +117,7 @@ export default function Onboarding({ settings, onDone }: { settings: Settings; o
         )}
 
         {slide && Art && (
-          <div className="flex min-h-0 flex-1 flex-col px-8 pb-5">
+          <div className="relative z-10 flex min-h-0 flex-1 flex-col px-8 pb-5">
             <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center">
               <AnimatePresence mode="wait" custom={direction}>
                 <motion.div
@@ -162,13 +162,25 @@ export default function Onboarding({ settings, onDone }: { settings: Settings; o
         )}
 
         {step === AI && (
-          <div className="flex min-h-0 flex-1 flex-col px-8 pb-5 pt-1">
-            <h2 className="text-lg font-semibold text-zinc-100">{t.aiTitle}</h2>
-            {aiConfig && <AiWizard config={aiConfig} onSaved={() => go(SETUP)} onLater={() => go(SETUP)} onCancel={() => go(LAST_SLIDE)} />}
+          <div className="relative z-10 flex min-h-0 flex-1 flex-col px-8 pb-5 pt-1">
+            {aiConfig && (
+              <AiWizard
+                centered
+                heading={<h2 className="mb-1 text-xl font-semibold text-zinc-100">{t.aiTitle}</h2>}
+                config={aiConfig}
+                onSaved={() => go(SETUP)}
+                onLater={() => go(SETUP)}
+                onCancel={() => go(LAST_SLIDE)}
+              />
+            )}
           </div>
         )}
 
-        {step === SETUP && <SetupStep settings={settings} onFinish={onDone} />}
+        {step === SETUP && (
+          <div className="relative z-10 flex min-h-0 flex-1 flex-col">
+            <SetupStep settings={settings} onFinish={onDone} />
+          </div>
+        )}
       </div>
     </I18nContext.Provider>
   )

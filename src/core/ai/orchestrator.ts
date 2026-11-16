@@ -5,7 +5,8 @@ import type { Embedder } from '../indexing/types'
 import { parseVPath } from '../media'
 import type { FileFilter, Hit, IndexedDoc, MemoryStore } from '../memory'
 
-export type Lang = 'es' | 'en'
+import { LANG_INFO, type Lang } from '@shared/langs'
+export type { Lang }
 
 /** Modelo de lenguaje local. `OllamaClient` lo implementa. */
 export interface Llm {
@@ -17,6 +18,8 @@ export interface AskOptions {
   limit?: number
   /** Fecha de "hoy" para interpretar fechas relativas. */
   now?: Date
+  /** Extensiones que el usuario dejó fuera de las búsquedas. Se respetan siempre, también al relajar filtros. */
+  excludeExtensions?: string[]
 }
 
 export interface AskResult {
@@ -77,8 +80,28 @@ const MESSAGES = {
     notFound: "I couldn't find anything matching your question.",
     found: (n: number, name: string, date: string, container?: string) =>
       `I found ${n} ${n === 1 ? 'file' : 'files'}. The most likely is “${name}”${container ? `, inside “${container}”,` : ''} from ${date}.`
+  },
+  pt: {
+    notFound: 'Não encontrei nada que corresponda à sua pergunta.',
+    found: (n: number, name: string, date: string, container?: string) =>
+      `Encontrei ${n} ${n === 1 ? 'arquivo' : 'arquivos'}. O mais provável é “${name}”${container ? `, dentro de “${container}”,` : ''} de ${date}.`
+  },
+  fr: {
+    notFound: "Je n'ai rien trouvé qui corresponde à votre question.",
+    found: (n: number, name: string, date: string, container?: string) =>
+      `J'ai trouvé ${n} ${n === 1 ? 'fichier' : 'fichiers'}. Le plus probable est « ${name} »${container ? `, dans « ${container} »,` : ''} du ${date}.`
+  },
+  ja: {
+    notFound: 'ご質問に一致するものは見つかりませんでした。',
+    found: (n: number, name: string, date: string, container?: string) =>
+      `${n} 件のファイルが見つかりました。最も可能性が高いのは${container ? `「${container}」の中の` : ''}「${name}」(${date})です。`
+  },
+  zh: {
+    notFound: '没有找到与你的问题相符的内容。',
+    found: (n: number, name: string, date: string, container?: string) =>
+      `找到 ${n} 个文件。最有可能的是${container ? `「${container}」中的` : ''}「${name}」(${date})。`
   }
-} as const
+} as const satisfies Record<Lang, unknown>
 
 // ---------------------------------------------------------------------------
 // Interpretación de la pregunta
@@ -233,7 +256,7 @@ interface Judgement {
 }
 
 function formatDate(ms: number, lang: Lang): string {
-  return new Intl.DateTimeFormat(lang === 'es' ? 'es-CL' : 'en-US', { dateStyle: 'long', timeZone: 'UTC' }).format(ms)
+  return new Intl.DateTimeFormat(LANG_INFO[lang].locale, { dateStyle: 'long', timeZone: 'UTC' }).format(ms)
 }
 
 export class Orchestrator {
@@ -261,6 +284,7 @@ export class Orchestrator {
     const lang = options.lang ?? 'es'
     const now = options.now ?? new Date()
     const limit = options.limit ?? 10
+    const excluded = options.excludeExtensions ?? []
     const warnings: string[] = []
     const q = question.trim()
     const base = { mode: this.llm ? ('full' as const) : ('light' as const), relaxed: false, warnings }
@@ -296,10 +320,11 @@ export class Orchestrator {
     // 3. Buscar; si los filtros inferidos no dejan nada, repetir sin ellos.
     const floor = mode === 'full' ? this.minSimilarity : this.lightMinSimilarity
     const text = `${parsed.query} ${q}`
-    let hits = await this.search(q, text, embedding, parsed.filter, floor)
+    const scoped = (f: FileFilter | undefined): FileFilter | undefined => (excluded.length > 0 ? { ...f, excludeExtensions: excluded } : f)
+    let hits = await this.search(q, text, embedding, scoped(parsed.filter), floor)
     let relaxed = false
     if (hits.length === 0 && parsed.filter) {
-      hits = await this.search(q, text, embedding, undefined, floor)
+      hits = await this.search(q, text, embedding, scoped(undefined), floor)
       relaxed = hits.length > 0
     }
     if (hits.length === 0) {
@@ -387,7 +412,7 @@ export class Orchestrator {
         return `[${i + 1}] ${name}${where}, modificado el ${formatDate(h.doc.mtime, lang)}.${via}${summary} Fragmento: ${h.snippet}`
       })
       .join('\n')
-    const language = lang === 'es' ? 'español' : 'English'
+    const language = lang === 'es' ? 'español' : LANG_INFO[lang].english
     const prompt = [
       `Eres el buscador de archivos personales de un usuario. Responde en ${language}.`,
       'Estos son los únicos archivos candidatos. No existen otros:',
@@ -444,6 +469,7 @@ export class Orchestrator {
 
 function matchesFilter(doc: IndexedDoc, filter: FileFilter | undefined): boolean {
   if (!filter) return true
+  if (filter.excludeExtensions?.includes(doc.ext)) return false
   if (filter.extensions && filter.extensions.length > 0 && !filter.extensions.includes(doc.ext)) return false
   if (filter.folder && !doc.path.startsWith(filter.folder)) return false
   if (filter.dateFrom !== undefined && doc.mtime < filter.dateFrom) return false

@@ -86,3 +86,30 @@ export function convertLegacy(ext: string, data: Buffer, target: 'txt' | 'csv' =
     }
   })
 }
+
+/**
+ * Convierte un documento o planilla antigua a un formato de hoy (DOCX o XLSX) con LibreOffice,
+ * conservando el formato. Trabaja sobre una copia temporal; el original nunca se toca.
+ */
+export function convertLegacyToModern(ext: string, data: Buffer, target: 'docx' | 'xlsx'): Promise<Buffer> {
+  const safeExt = ext.replace(/[^a-z0-9]/gi, '').slice(0, 8) || 'bin'
+  return serialize(async () => {
+    const bin = await findSoffice()
+    if (!bin) throw new ExtractError('LibreOffice no está instalado')
+    const dir = await mkdtemp(join(tmpdir(), 'medium-lo-'))
+    try {
+      const input = join(dir, `in.${safeExt}`)
+      await writeFile(input, data)
+      const profile = pathToFileURL(join(tmpdir(), 'medium-lo-profile')).href
+      await execFileAsync(bin, ['--headless', '--norestore', '--nolockcheck', `-env:UserInstallation=${profile}`, '--convert-to', target, '--outdir', dir, input], {
+        timeout: CONVERT_TIMEOUT_MS
+      })
+      return await readFile(join(dir, `in.${target}`))
+    } catch (error) {
+      if (error instanceof ExtractError) throw error
+      throw new ExtractError(`LibreOffice no pudo convertir el archivo: ${error instanceof Error ? error.message : String(error)}`, { cause: error })
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+}

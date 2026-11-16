@@ -8,10 +8,11 @@ import { EntityExtractor, EntityService } from '@core/entities'
 import { buildObituary, GhostHunter } from '@core/ghosts'
 import { FatalIndexError, ImageReader, IndexPipeline, watchFolder, type Embedder, type FolderWatcher } from '@core/indexing'
 import { isVirtualPath, openContainer, parseVPath } from '@core/media'
+import { convertLegacyToModern, extractText, LEGACY_EXTENSIONS, SHEET_LEGACY_EXTENSIONS } from '@core/extract'
 import { SqliteStore } from '@core/memory'
 import { kindOf, type FileKind } from '@shared/filetypes'
 import type { Ghost, Person, PersonSummary, SearchAnswer } from '@shared/types'
-import type { ChangeDto, IndexState, NameDecision, OllamaHint, OllamaStatus, RestoreOutcome, Settings, TrashItemDto, TrashOverview } from '@shared/ipc'
+import type { ChangeDto, IndexState, KindCount, NameDecision, OllamaHint, OllamaStatus, RestoreOutcome, Settings, TrashItemDto, TrashOverview } from '@shared/ipc'
 import { AiService } from './ai'
 import type { SecretStore } from './secrets'
 import type { SettingsStore } from './settings'
@@ -43,6 +44,11 @@ export interface MediumCoreDeps {
   rescanEveryMs?: number
   /** Solo pruebas: dónde buscar la papelera. */
   trash?: TrashDeps
+  /**
+   * Modo pasivo (servidor MCP): solo lee el índice que mantiene la aplicación. No vigila carpetas, no
+   * enciende el motor local, no cambia la configuración y responde sin modelo de lenguaje.
+   */
+  passive?: boolean
 }
 
 const EMPTY_STATE: IndexState = { phase: 'idle', processed: 0, total: 0, indexed: 0, skipped: 0, errors: 0 }
@@ -103,8 +109,10 @@ export class MediumCore {
 
   async init(): Promise<void> {
     await mkdir(this.deps.dataDir, { recursive: true })
-    await rm(this.tempDir, { recursive: true, force: true }) // las copias para abrir no sobreviven al reinicio
+    // Las copias para abrir no sobreviven al reinicio (el servidor MCP no las toca: son de la aplicación).
+    if (!this.deps.passive) await rm(this.tempDir, { recursive: true, force: true })
     await this.openStore(this.settings.embedDimensions)
+    if (this.deps.passive) return
 
     await this.syncEmbeddingDimensions()
     // Si el motor local está instalado pero apagado (por ejemplo, tras reiniciar), se enciende sin bloquear el arranque.
@@ -139,7 +147,7 @@ export class MediumCore {
   async close(): Promise<void> {
     clearTimeout(this.entityTimer)
     clearInterval(this.rescanTimer)
-    this.setup.stopServer()
+    if (!this.deps.passive) this.setup.stopServer()
     this.abort?.abort()
     await this.running?.catch(() => undefined)
     await this.stopWatchers()
@@ -219,17 +227,39 @@ export class MediumCore {
     }
     const embedModelInstalled = models.some((m) => m === s.embedModel || m.startsWith(`${s.embedModel}:`))
     const remote = s.ai.mode === 'remote'
-    const chatModel = remote ? undefined : (await this.localClient()).chatModel
+    // El modelo local de respuestas, aunque se use un servicio externo: sigue sirviendo para personas y resúmenes.
+    const chatModel = (await this.localClient()).chatModel
     const hints: OllamaHint[] = []
     if (!embedModelInstalled) hints.push({ code: 'pull-embed', command: `ollama pull ${s.embedModel}` })
     if (!chatModel && !remote) hints.push({ code: 'pull-chat', command: 'ollama pull qwen3.5:4b' })
     return { available: true, host: s.ollamaHost, models, embedModel: s.embedModel, embedModelInstalled, chatModel, hints }
   }
 
+  // --- Tipos de archivo ---------------------------------------------------
+
+  /** Tipos presentes en el índice, del más numeroso al menos. */
+  async fileKinds(): Promise<KindCount[]> {
+    const counts = new Map<FileKind, number>()
+    for (const { ext, count } of await this.store.extensionCounts()) {
+      const kind = kindOf(ext)
+      counts.set(kind, (counts.get(kind) ?? 0) + count)
+    }
+    return [...counts].map(([kind, count]) => ({ kind, count })).sort((a, b) => b.count - a.count || a.kind.localeCompare(b.kind))
+  }
+
+  /** Extensiones indexadas que pertenecen a los tipos que el usuario dejó fuera de las búsquedas. */
+  private async excludedExtensions(): Promise<string[]> {
+    const kinds = new Set(this.settings.excludedKinds)
+    if (kinds.size === 0) return []
+    return (await this.store.extensionCounts()).map((r) => r.ext).filter((ext) => kinds.has(kindOf(ext)))
+  }
+
   // --- Preguntas ---------------------------------------------------------
 
   async ask(question: string): Promise<SearchAnswer> {
-    const { client, chatModel } = await this.client()
+    const { client, chatModel: configured } = await this.client()
+    // En modo pasivo responde sin modelo: quien pregunta ya es un modelo de lenguaje (el agente MCP).
+    const chatModel = this.deps.passive ? undefined : configured
     // Si el servicio externo falla (clave inválida, sin saldo…), se responde en modo ligero y se avisa por qué.
     let aiProblem: AiError['code'] | undefined
     const llm: Llm | undefined = chatModel
@@ -245,7 +275,7 @@ export class MediumCore {
         }
       : undefined
     const orchestrator = new Orchestrator({ store: this.store, embedder: client, llm, entities: this.entityService })
-    const r = await orchestrator.ask(question, { lang: this.settings.lang })
+    const r = await orchestrator.ask(question, { lang: this.settings.lang, excludeExtensions: await this.excludedExtensions() })
     return {
       answer: r.answer,
       found: r.found,
@@ -380,6 +410,46 @@ export class MediumCore {
   async exportTo(path: string, destDir: string): Promise<string> {
     await this.requireIndexed(path)
     const { name, data } = await this.readIndexed(path)
+    return this.writeNew(destDir, name, data)
+  }
+
+  /**
+   * Texto completo de un archivo indexado, tal como OUIJA lo recupera: convertido si es un formato
+   * antiguo, rescatado de sus bytes si está dañado y con la codificación reparada.
+   */
+  async readRecovered(path: string): Promise<{ name: string; text: string; confidence: string; resurrected: boolean; method: string }> {
+    const { name, data } = await this.readIndexed(path)
+    const r = await extractText({ name, read: async () => data })
+    return { name, text: r.text, confidence: r.confidence, resurrected: r.resurrected, method: r.method }
+  }
+
+  /**
+   * "Traer al presente": guarda en `destDir` una copia del archivo en un formato de hoy. Documentos y
+   * planillas antiguas pasan a DOCX o XLSX con LibreOffice (conservan el formato); si no se puede, o
+   * para texto rescatado, a Markdown en UTF-8. Nunca sobrescribe ni toca el original.
+   */
+  async bringToPresent(path: string, destDir: string): Promise<{ savedTo: string; format: 'docx' | 'xlsx' | 'md' }> {
+    await this.requireIndexed(path)
+    const { name, data } = await this.readIndexed(path)
+    const ext = extname(name).slice(1).toLowerCase()
+    const stem = name.slice(0, name.length - (ext ? ext.length + 1 : 0)) || name
+    const target = (LEGACY_EXTENSIONS as readonly string[]).includes(ext) ? 'docx' : (SHEET_LEGACY_EXTENSIONS as readonly string[]).includes(ext) ? 'xlsx' : null
+    if (target) {
+      try {
+        const modern = await convertLegacyToModern(ext, data, target)
+        return { savedTo: await this.writeNew(destDir, `${stem}.${target}`, modern), format: target }
+      } catch {
+        // Sin LibreOffice o con un archivo que no convierte: queda el texto rescatado.
+      }
+    }
+    const r = await extractText({ name, read: async () => data })
+    const date = new Date(this.now()).toISOString().slice(0, 10)
+    const md = `# ${stem}\n\n> ${name} · OUIJA ${date}\n\n${r.text.replace(/\r\n?/g, '\n').trim()}\n`
+    return { savedTo: await this.writeNew(destDir, `${stem}.md`, Buffer.from(md, 'utf8')), format: 'md' }
+  }
+
+  /** Escribe un archivo nuevo en `destDir` sin sobrescribir nada: si el nombre existe, agrega " (n)". */
+  private async writeNew(destDir: string, name: string, data: Buffer): Promise<string> {
     await mkdir(destDir, { recursive: true })
     const ext = extname(name)
     const stem = name.slice(0, name.length - ext.length)

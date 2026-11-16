@@ -1,5 +1,10 @@
 import { createContext, useContext } from 'react'
 import type { Lang } from '@shared/types'
+import { LANG_INFO } from '@shared/langs'
+import fr from './locales/fr'
+import ja from './locales/ja'
+import pt from './locales/pt'
+import zh from './locales/zh'
 
 export type { Lang }
 
@@ -7,6 +12,14 @@ const dict = {
   es: {
     notDesktop: 'OUIJA funciona dentro de su aplicación de escritorio. Ábrela desde la bandeja o con npm run dev.',
     // --- Cambios y Patíbulo ---
+    present: 'Traer al presente',
+    presentHelp: 'Guarda una copia en un formato de hoy (.docx, .xlsx o .md) en la carpeta que elijas. El original no se toca.',
+    presented: (f: string) => `Traído al presente como ${f}:`,
+    mcpTitle: 'Conectar con agentes de IA (MCP)',
+    mcpText: 'Kiro, Claude Desktop u otro agente compatible con MCP pueden preguntarle a OUIJA dónde están tus archivos y leer los que resucitó. Solo lee el índice: nunca modifica nada. Pega esto en el mcp.json del agente:',
+    mcpCopy: 'Copiar configuración',
+    mcpCopied: 'Copiada',
+    mcpTools: 'Herramientas: ask_ouija, read_resurrected, list_ghosts, find_person, recent_changes.',
     tabGallows: 'Patíbulo',
     changesTitle: 'Últimos cambios',
     changesEmpty: 'Cuando lleguen archivos nuevos o cambien, los verás aquí.',
@@ -68,8 +81,35 @@ const dict = {
     errNoOriginal: 'no se sabe dónde estaba',
     errNoDestination: 'la carpeta de destino no es válida',
     errFailed: 'falló al moverlo',
+    kindsTitle: 'Tipos de archivo en las búsquedas',
+    kindsHelp: 'Elige qué tipos de lo que OUIJA encontró en tu equipo entran en las búsquedas. No se borra ni se reindexa nada: puedes cambiarlo cuando quieras.',
+    kindsEmpty: 'Cuando OUIJA indexe tus carpetas, aquí verás qué tipos de archivo hay.',
+    kindsAll: 'Incluir todos',
+    kindsCount: (n: number) => (n === 1 ? '1 archivo' : `${n} archivos`),
+    kindsExcluded: (n: number) => (n === 1 ? '1 tipo fuera de las búsquedas' : `${n} tipos fuera de las búsquedas`),
+    ambienceToggle: 'Ambiente tenebroso de fondo',
+    ambienceHelp: 'Niebla baja, relámpagos lejanos y fantasmas que cruzan por detrás. Sutil.',
     watchToggle: 'Detectar archivos nuevos y cambios mientras OUIJA esté abierto',
     watchHelp: 'En vivo, y con una revisión de respaldo cada 15 minutos.',
+    // --- Recorrido guiado ---
+    tourProgressTitle: 'Los espíritus están leyendo',
+    tourProgressText: 'Este contador muestra cuántos archivos llevan leídos de tus carpetas. Puedes buscar desde ya: lo que aún no leen aparecerá en cuanto lo hagan.',
+    tourSearchTitle: 'Pregúntale a la tabla',
+    tourSearchText: 'Escribe lo que recuerdas, como se lo dirías a alguien. OUIJA busca por significado y te dice dónde quedó el archivo, aunque esté enterrado en un respaldo.',
+    tourGhostsTitle: 'Fantasmas',
+    tourGhostsText: 'Archivos olvidados hace años, copias repetidas y versiones casi idénticas. Cada uno con su necrológica. OUIJA nunca los toca.',
+    tourPeopleTitle: 'Personas / Espectros',
+    tourPeopleText: 'Quién aparece en tus documentos y cuándo. Busca un nombre y abre los archivos que lo mencionan.',
+    tourGallowsTitle: 'Patíbulo',
+    tourGallowsText: 'Lo condenado a la papelera. Mientras siga ahí, puedes resucitarlo a su lugar, sin sobrescribir nada.',
+    tourSettingsTitle: 'Ajustes',
+    tourSettingsText: 'Carpetas, tipos de archivo en las búsquedas, modelo de lenguaje e idioma. Desde aquí también puedes repetir este recorrido.',
+    tourLocalTitle: 'Todo queda aquí',
+    tourLocalText: 'Tus archivos no salen de este equipo. Si eliges un servicio externo, solo viaja tu pregunta y fragmentos cortos.',
+    tourStep: (n: number, total: number) => `${n} de ${total}`,
+    tourSkip: 'Saltar',
+    tourDone: 'Que empiece la sesión',
+    tourAgain: 'Repetir el recorrido',
     // --- Modelo de lenguaje ---
     aiTitle: 'Modelo de lenguaje',
     aiSub: 'Entiende tus preguntas y redacta las respuestas. La búsqueda por significado siempre se hace en tu equipo.',
@@ -103,6 +143,17 @@ const dict = {
     aiTesting: 'Probando el modelo…',
     aiBack: 'Atrás',
     aiUseLocal: 'Usar el modelo local',
+    aiCardTitle: 'Inteligencia artificial',
+    aiRoleSearch: 'Búsqueda por significado',
+    aiRoleAnswers: 'Respuestas a tus preguntas',
+    aiRoleDocs: 'Personas y resúmenes',
+    aiWhereLocal: 'En este equipo',
+    aiWhereRemote: 'Servicio externo',
+    aiRoleSearchMissing: 'Falta el modelo: por ahora solo por palabras',
+    aiRoleLight: 'Modo ligero: sin modelo de respuestas',
+    aiRoleOff: 'Desactivado: no hay modelo local',
+    aiRemoteNote: 'La búsqueda por significado siempre se hace en tu equipo. Al servicio externo solo viajan tu pregunta y fragmentos cortos de los archivos candidatos.',
+    aiLocalNote: 'Todo se hace en tu equipo: nada sale de aquí.',
     aiSavedLocal: 'Usando el modelo local',
     aiSavedRemote: (provider: string, model: string) => `Usando ${provider} · ${model}`,
     aiCurrent: 'Actual',
@@ -196,9 +247,12 @@ const dict = {
     hintNav: 'navegar',
     hintOpen: 'abrir',
     hintHide: 'minimizar',
+    clearSearch: 'Borrar la pregunta',
     minimize: 'Minimizar',
     close: 'Cerrar OUIJA',
     localBadge: 'Todo local',
+    remoteBadge: (p: string) => `Respuestas con ${p}`,
+    remoteBadgeHelp: 'Las respuestas las da un servicio externo; la búsqueda por significado sigue en tu equipo.',
     lightMode: 'Modo ligero: sin modelo de lenguaje, la respuesta es más simple.',
     askFailed: 'No se pudo completar la búsqueda',
     actionFailed: 'No se pudo completar la acción',
@@ -220,8 +274,13 @@ const dict = {
     groupDuplicate: (n: number) => `${n} copias exactas`,
     groupVersion: (n: number) => `${n} versiones casi idénticas`,
     ago: (n: number) => (n <= 0 ? 'este año' : n === 1 ? 'hace 1 año' : `hace ${n} años`),
-    peopleTitle: 'Personas en tu pasado',
-    peopleSub: 'Extraídas de tus documentos. Une o separa nombres cuando quieras.',
+    peopleTitle: 'Personas / Espectros',
+    peopleSub: 'Quién aparece en tus documentos. Busca un nombre, abre los archivos que lo mencionan y une o separa nombres cuando quieras.',
+    peopleSearch: 'Buscar un nombre…',
+    peopleNoMatch: 'Nadie con ese nombre.',
+    peopleTotal: (n: number) => (n === 1 ? '1 persona' : `${n} personas`),
+    personFiles: 'Archivos que la mencionan',
+    maximize: 'Maximizar o restaurar',
     peopleEmpty: 'Aún no hay personas. Se extraen en segundo plano después de indexar, con el modelo local.',
     timeline: 'Línea de tiempo',
     alsoKnown: 'También aparece como',
@@ -272,6 +331,33 @@ const dict = {
   en: {
     notDesktop: 'OUIJA runs inside its desktop app. Open it from the tray or with npm run dev.',
     // --- Changes and Gallows ---
+    // --- Guided tour ---
+    tourProgressTitle: 'The spirits are reading',
+    tourProgressText: 'This counter shows how many files from your folders they have read so far. You can search right away: whatever is not read yet will show up as soon as it is.',
+    tourSearchTitle: 'Ask the board',
+    tourSearchText: 'Type what you remember, the way you would tell someone. OUIJA searches by meaning and tells you where the file ended up, even if it is buried in a backup.',
+    tourGhostsTitle: 'Ghosts',
+    tourGhostsText: 'Files forgotten for years, repeated copies and near-identical versions. Each with its obituary. OUIJA never touches them.',
+    tourPeopleTitle: 'People / Specters',
+    tourPeopleText: 'Who appears in your documents and when. Search a name and open the files that mention it.',
+    tourGallowsTitle: 'Gallows',
+    tourGallowsText: 'What was sentenced to the trash. While it is still there, you can resurrect it to its place, without overwriting anything.',
+    tourSettingsTitle: 'Settings',
+    tourSettingsText: 'Folders, file types in searches, language model and language. You can also replay this tour from here.',
+    tourLocalTitle: 'Everything stays here',
+    tourLocalText: 'Your files never leave this computer. If you choose an external service, only your question and short snippets travel.',
+    tourStep: (n: number, total: number) => `${n} of ${total}`,
+    tourSkip: 'Skip',
+    tourDone: 'Let the séance begin',
+    tourAgain: 'Replay the tour',
+    present: 'Bring to the present',
+    presentHelp: 'Saves a copy in a current format (.docx, .xlsx or .md) in the folder you choose. The original is not touched.',
+    presented: (f: string) => `Brought to the present as ${f}:`,
+    mcpTitle: 'Connect AI agents (MCP)',
+    mcpText: 'Kiro, Claude Desktop or any MCP-compatible agent can ask OUIJA where your files are and read the ones it resurrected. It only reads the index: it never changes anything. Paste this into the agent mcp.json:',
+    mcpCopy: 'Copy configuration',
+    mcpCopied: 'Copied',
+    mcpTools: 'Tools: ask_ouija, read_resurrected, list_ghosts, find_person, recent_changes.',
     tabGallows: 'Gallows',
     changesTitle: 'Latest changes',
     changesEmpty: 'When new files arrive or change, you will see them here.',
@@ -333,6 +419,14 @@ const dict = {
     errNoOriginal: 'where it was is unknown',
     errNoDestination: 'the destination folder is not valid',
     errFailed: 'moving it failed',
+    kindsTitle: 'File types in searches',
+    kindsHelp: 'Choose which of the file types OUIJA found on your computer are included in searches. Nothing is deleted or re-indexed: you can change it any time.',
+    kindsEmpty: 'Once OUIJA indexes your folders, you will see here which file types you have.',
+    kindsAll: 'Include all',
+    kindsCount: (n: number) => (n === 1 ? '1 file' : `${n} files`),
+    kindsExcluded: (n: number) => (n === 1 ? '1 type left out of searches' : `${n} types left out of searches`),
+    ambienceToggle: 'Spooky background ambience',
+    ambienceHelp: 'Low fog, distant lightning and ghosts drifting behind. Subtle.',
     watchToggle: 'Detect new files and changes while OUIJA is open',
     watchHelp: 'Live, with a backup check every 15 minutes.',
     // --- Language model ---
@@ -368,6 +462,17 @@ const dict = {
     aiTesting: 'Testing the model…',
     aiBack: 'Back',
     aiUseLocal: 'Use the local model',
+    aiCardTitle: 'Artificial intelligence',
+    aiRoleSearch: 'Search by meaning',
+    aiRoleAnswers: 'Answers to your questions',
+    aiRoleDocs: 'People and summaries',
+    aiWhereLocal: 'On this computer',
+    aiWhereRemote: 'External service',
+    aiRoleSearchMissing: 'Model missing: words only for now',
+    aiRoleLight: 'Light mode: no answer model',
+    aiRoleOff: 'Off: no local model',
+    aiRemoteNote: 'Search by meaning always runs on your computer. Only your question and short snippets of the candidate files go to the external service.',
+    aiLocalNote: 'Everything runs on your computer: nothing leaves it.',
     aiSavedLocal: 'Using the local model',
     aiSavedRemote: (provider: string, model: string) => `Using ${provider} · ${model}`,
     aiCurrent: 'Current',
@@ -461,9 +566,12 @@ const dict = {
     hintNav: 'navigate',
     hintOpen: 'open',
     hintHide: 'minimize',
+    clearSearch: 'Clear the question',
     minimize: 'Minimize',
     close: 'Close OUIJA',
     localBadge: 'Fully local',
+    remoteBadge: (p: string) => `Answers by ${p}`,
+    remoteBadgeHelp: 'Answers come from an external service; search by meaning still runs on your computer.',
     lightMode: 'Light mode: no language model, so answers are simpler.',
     askFailed: 'The search could not be completed',
     actionFailed: 'The action could not be completed',
@@ -485,8 +593,13 @@ const dict = {
     groupDuplicate: (n: number) => `${n} exact copies`,
     groupVersion: (n: number) => `${n} near-identical versions`,
     ago: (n: number) => (n <= 0 ? 'this year' : n === 1 ? '1 year ago' : `${n} years ago`),
-    peopleTitle: 'People in your past',
-    peopleSub: 'Extracted from your documents. Merge or split names any time.',
+    peopleTitle: 'People / Specters',
+    peopleSub: 'Who appears in your documents. Search a name, open the files that mention it, and merge or split names any time.',
+    peopleSearch: 'Search a name…',
+    peopleNoMatch: 'Nobody with that name.',
+    peopleTotal: (n: number) => (n === 1 ? '1 person' : `${n} people`),
+    personFiles: 'Files that mention them',
+    maximize: 'Maximize or restore',
     peopleEmpty: 'No people yet. They are extracted in the background after indexing, with the local model.',
     timeline: 'Timeline',
     alsoKnown: 'Also appears as',
@@ -536,18 +649,20 @@ const dict = {
   }
 } as const
 
-export type Dict = (typeof dict)['es']
+/** Los textos de un idioma: mismas claves que el español, con cualquier texto. */
+export type Dict = { [K in keyof (typeof dict)['es']]: (typeof dict)['es'][K] extends (...args: infer A) => string ? (...args: A) => string : string }
+
+const DICTS: Record<Lang, Dict> = { es: dict.es, en: dict.en, pt, fr, ja, zh }
 
 export const I18nContext = createContext<{ lang: Lang; t: Dict; fmtDate: (ms: number) => string }>({
   lang: 'es',
-  t: dict.es,
+  t: dict.es as Dict,
   fmtDate: (ms) => new Date(ms).toLocaleDateString('es-CL')
 })
 
 export function makeI18n(lang: Lang) {
-  const locale = lang === 'es' ? 'es-CL' : 'en-US'
-  const fmt = new Intl.DateTimeFormat(locale, { dateStyle: 'long' })
-  return { lang, t: dict[lang] as Dict, fmtDate: (ms: number) => fmt.format(ms) }
+  const fmt = new Intl.DateTimeFormat(LANG_INFO[lang].locale, { dateStyle: 'long' })
+  return { lang, t: DICTS[lang], fmtDate: (ms: number) => fmt.format(ms) }
 }
 
 export const useI18n = () => useContext(I18nContext)

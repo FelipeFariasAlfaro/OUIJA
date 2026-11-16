@@ -1,9 +1,12 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import type { AppInfo, IndexState, OllamaStatus, Settings } from '@shared/ipc'
+import type { AppInfo, IndexState, KindCount, OllamaStatus, Settings } from '@shared/ipc'
+import { KIND_LABEL } from '@shared/filetypes'
 import type { Lang } from '@shared/types'
+import { LANG_IDS, LANG_INFO } from '@shared/langs'
 import { api } from '../api'
 import { AI_PROVIDERS, type AiConfig } from '@shared/ai'
 import AiWizard from '../ai/AiWizard'
+import { ProviderLogo } from '../ai/ProviderLogo'
 import { ActionButton } from '../components/ui'
 import { useI18n } from '../i18n'
 
@@ -16,8 +19,11 @@ function Card({ title, children }: { title: string; children: ReactNode }) {
   )
 }
 
-export default function SettingsView({ settings, index, onSettings }: { settings: Settings; index: IndexState; onSettings: (s: Settings) => void }) {
-  const { t, fmtDate } = useI18n()
+export default function SettingsView({ settings, index, onSettings, onTour }: { settings: Settings; index: IndexState; onSettings: (s: Settings) => void; onTour?: () => void }) {
+  const { lang, t, fmtDate } = useI18n()
+  const [kinds, setKinds] = useState<KindCount[]>([])
+  const [mcp, setMcp] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
   const [ollama, setOllama] = useState<OllamaStatus | null>(null)
   const [info, setInfo] = useState<AppInfo | null>(null)
   const [confirmForget, setConfirmForget] = useState(false)
@@ -29,6 +35,8 @@ export default function SettingsView({ settings, index, onSettings }: { settings
     void api.ollamaStatus().then(setOllama).catch(() => setOllama(null))
     void api.appInfo().then(setInfo).catch(() => setInfo(null))
     void api.aiConfig().then(setAi).catch(() => setAi(null))
+    void api.fileKinds().then(setKinds).catch(() => setKinds([]))
+    void api.mcpConfig().then(setMcp).catch(() => setMcp(null))
   }, [index.phase])
 
   const phaseText =
@@ -70,6 +78,43 @@ export default function SettingsView({ settings, index, onSettings }: { settings
         </div>
       </Card>
 
+      <Card title={t.kindsTitle}>
+        <p className="mb-2 text-[12px] text-zinc-500">{t.kindsHelp}</p>
+        {kinds.length === 0 ? (
+          <p className="text-sm text-zinc-500">{t.kindsEmpty}</p>
+        ) : (
+          <>
+            <ul className="grid grid-cols-1 gap-x-4 gap-y-1 sm:grid-cols-2" data-testid="kind-list">
+              {kinds.map(({ kind, count }) => {
+                const included = !settings.excludedKinds.includes(kind)
+                return (
+                  <li key={kind}>
+                    <label className="flex items-center gap-2 text-[13px] text-zinc-300">
+                      <input
+                        type="checkbox"
+                        checked={included}
+                        onChange={() => {
+                          const next = included ? [...settings.excludedKinds, kind] : settings.excludedKinds.filter((k) => k !== kind)
+                          void api.setSettings({ excludedKinds: next }).then(onSettings)
+                        }}
+                        className="accent-violet-500"
+                      />
+                      <span className="flex-1">{KIND_LABEL[lang][kind]}</span>
+                      <span className="text-[11px] text-zinc-500">{t.kindsCount(count)}</span>
+                    </label>
+                  </li>
+                )
+              })}
+            </ul>
+            {settings.excludedKinds.length > 0 && (
+              <div className="mt-2 flex items-center gap-3 text-[12px] text-amber-200">
+                {t.kindsExcluded(settings.excludedKinds.length)}
+                <ActionButton onClick={() => void api.setSettings({ excludedKinds: [] }).then(onSettings)}>{t.kindsAll}</ActionButton>
+              </div>
+            )}
+          </>
+        )}
+      </Card>
       <Card title={t.settingsIndex}>
         <div className="flex items-center gap-2 text-[13px] text-zinc-300">
           <span className={`h-2 w-2 rounded-full ${index.phase === 'error' ? 'bg-rose-400' : busy ? 'animate-pulse bg-violet-400' : 'bg-emerald-400'}`} />
@@ -97,14 +142,46 @@ export default function SettingsView({ settings, index, onSettings }: { settings
         </div>
       </Card>
 
-      <Card title={t.aiTitle}>
+      <Card title={t.aiCardTitle}>
         {ai && !changingAi && (
           <>
-            <p className="text-[13px] text-zinc-200">
-              {ai.mode === 'remote' && ai.provider && ai.model ? t.aiSavedRemote(AI_PROVIDERS[ai.provider].name, ai.model) : t.aiSavedLocal}
-            </p>
-            {ai.mode === 'remote' && !ai.hasKey && <p className="mt-1 text-[12px] text-amber-200/90">{t.aiMissingKey}</p>}
-            {ai.mode === 'remote' && ai.remoteDocuments && <p className="mt-1 text-[11px] text-zinc-500">{t.aiDocsToggle}</p>}
+            {(() => {
+              const remote = ai.mode === 'remote' && ai.provider && ai.model ? { name: AI_PROVIDERS[ai.provider].name, id: ai.provider, model: ai.model } : null
+              const localChat = ollama?.available ? ollama.chatModel : undefined
+              const local = (model: string) => (
+                <>
+                  <span className="rounded-full bg-emerald-400/10 px-1.5 py-px text-[10px] text-emerald-200">{t.aiWhereLocal}</span>
+                  <span className="truncate text-zinc-200">{model}</span>
+                </>
+              )
+              const external = remote && (
+                <>
+                  <ProviderLogo id={remote.id} className="h-3.5 w-3.5 shrink-0 text-violet-300" />
+                  <span className="rounded-full bg-violet-400/15 px-1.5 py-px text-[10px] text-violet-200">{t.aiWhereRemote}</span>
+                  <span className="truncate text-zinc-200">
+                    {remote.name} · {remote.model}
+                  </span>
+                </>
+              )
+              const none = (text: string) => <span className="text-amber-200/90">{text}</span>
+              const rows: [string, React.ReactNode][] = [
+                [t.aiRoleSearch, ollama?.available && ollama.embedModelInstalled ? local(ollama.embedModel) : none(t.aiRoleSearchMissing)],
+                [t.aiRoleAnswers, external || (localChat ? local(localChat) : none(t.aiRoleLight))],
+                [t.aiRoleDocs, remote && ai.remoteDocuments ? external : localChat ? local(localChat) : none(t.aiRoleOff)]
+              ]
+              return (
+                <dl className="grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-2 text-[13px]" data-testid="ai-roles">
+                  {rows.map(([role, who]) => (
+                    <div key={role} className="contents">
+                      <dt className="text-zinc-500">{role}</dt>
+                      <dd className="flex min-w-0 items-center gap-1.5">{who}</dd>
+                    </div>
+                  ))}
+                </dl>
+              )
+            })()}
+            {ai.mode === 'remote' && !ai.hasKey && <p className="mt-2 text-[12px] text-amber-200/90">{t.aiMissingKey}</p>}
+            <p className="mt-2.5 text-[11px] text-zinc-500">{ai.mode === 'remote' ? t.aiRemoteNote : t.aiLocalNote}</p>
             <div className="mt-2.5 flex flex-wrap items-center gap-2">
               <ActionButton onClick={() => setChangingAi(true)}>{t.aiChange}</ActionButton>
               {ai.keyedProviders.map((p) => (
@@ -112,6 +189,20 @@ export default function SettingsView({ settings, index, onSettings }: { settings
                   {t.aiForgetKey} {AI_PROVIDERS[p].name}
                 </button>
               ))}
+            </div>
+            <div className="mt-3 border-t border-white/5 pt-2.5">
+              <div className="flex items-center gap-2 text-[12px] text-zinc-400">
+                <span className={`h-1.5 w-1.5 rounded-full ${ollama?.available ? 'bg-emerald-400' : 'bg-rose-400'}`} />
+                {ollama?.available ? t.ollamaOk : t.ollamaDown}
+              </div>
+              {ollama?.hints
+                .filter((h) => !(h.code === 'pull-chat' && ai.mode === 'remote'))
+                .map((h) => (
+                  <div key={h.code} className="mt-1.5 text-[12px] text-amber-200/90">
+                    {h.code === 'start-ollama' ? t.hintStart : h.code === 'pull-embed' ? t.hintPullEmbed : t.hintPullChat}
+                    {h.command && <code className="ml-1.5 rounded bg-black/40 px-1.5 py-0.5 text-zinc-200">{h.command}</code>}
+                  </div>
+                ))}
             </div>
           </>
         )}
@@ -123,33 +214,33 @@ export default function SettingsView({ settings, index, onSettings }: { settings
               onSaved={(c) => {
                 setAi(c)
                 setChangingAi(false)
+                void api.getSettings().then(onSettings) // la barra superior muestra qué IA responde
               }}
             />
           </div>
         )}
       </Card>
-
-      <Card title={t.settingsModels}>
-        <div className="flex items-center gap-2 text-[13px] text-zinc-300">
-          <span className={`h-2 w-2 rounded-full ${ollama?.available ? 'bg-emerald-400' : 'bg-rose-400'}`} />
-          {ollama?.available ? t.ollamaOk : t.ollamaDown}
-        </div>
-        {ollama?.available && (
-          <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[13px]">
-            <dt className="text-zinc-500">{t.modelEmbed}</dt>
-            <dd className="text-zinc-300">{ollama.embedModelInstalled ? ollama.embedModel : t.modelNone}</dd>
-            <dt className="text-zinc-500">{t.modelChat}</dt>
-            <dd className="text-zinc-300">{ollama.chatModel ?? t.modelNone}</dd>
-          </dl>
-        )}
-        {ollama?.hints.map((h) => (
-          <div key={h.code} className="mt-2 text-[12px] text-amber-200/90">
-            {h.code === 'start-ollama' ? t.hintStart : h.code === 'pull-embed' ? t.hintPullEmbed : t.hintPullChat}
-            {h.command && <code className="ml-1.5 rounded bg-black/40 px-1.5 py-0.5 text-zinc-200">{h.command}</code>}
+      {mcp && (
+        <Card title={t.mcpTitle}>
+          <p className="text-[12px] leading-relaxed text-zinc-400">{t.mcpText}</p>
+          <pre data-testid="mcp-config" className="mt-2 max-h-40 overflow-auto rounded-lg border border-white/10 bg-black/40 p-2.5 text-[11px] leading-snug text-violet-100 select-text">
+            {mcp}
+          </pre>
+          <div className="mt-2 flex items-center gap-3">
+            <ActionButton
+              onClick={() =>
+                void navigator.clipboard.writeText(mcp).then(() => {
+                  setCopied(true)
+                  setTimeout(() => setCopied(false), 1800)
+                })
+              }
+            >
+              {copied ? `✓ ${t.mcpCopied}` : t.mcpCopy}
+            </ActionButton>
+            <span className="text-[11px] text-zinc-500">{t.mcpTools}</span>
           </div>
-        ))}
-      </Card>
-
+        </Card>
+      )}
       <Card title={t.settingsGeneral}>
         <div className="flex items-center gap-3 text-[13px] text-zinc-300">
           <label htmlFor="lang" className="text-zinc-500">
@@ -161,8 +252,11 @@ export default function SettingsView({ settings, index, onSettings }: { settings
             onChange={(e) => void api.setSettings({ lang: e.target.value as Lang }).then(onSettings)}
             className="rounded-md border border-white/10 bg-[#14141f] px-2 py-1 text-xs text-zinc-200"
           >
-            <option value="es">Español</option>
-            <option value="en">English</option>
+            {LANG_IDS.map((id) => (
+              <option key={id} value={id}>
+                {LANG_INFO[id].name}
+              </option>
+            ))}
           </select>
         </div>
         <label className="mt-3 flex items-start gap-2 text-[13px] text-zinc-300">
@@ -170,6 +264,13 @@ export default function SettingsView({ settings, index, onSettings }: { settings
           <span>
             {t.ocrImages}
             <span className="block text-[11px] text-zinc-500">{t.ocrHelp}</span>
+          </span>
+        </label>
+        <label className="mt-3 flex items-start gap-2 text-[13px] text-zinc-300">
+          <input type="checkbox" checked={settings.ambience} onChange={(e) => void api.setSettings({ ambience: e.target.checked }).then(onSettings)} className="mt-0.5 accent-violet-500" />
+          <span>
+            {t.ambienceToggle}
+            <span className="block text-[11px] text-zinc-500">{t.ambienceHelp}</span>
           </span>
         </label>
         <label className="mt-3 flex items-start gap-2 text-[13px] text-zinc-300">
@@ -190,7 +291,8 @@ export default function SettingsView({ settings, index, onSettings }: { settings
 
       <Card title={t.howToOpenTitle}>
         <p className="text-[13px] leading-relaxed text-zinc-400">{t.howToOpen}</p>
-        <div className="mt-2.5">
+        <div className="mt-2.5 flex gap-2">
+          {onTour && <ActionButton onClick={onTour}>{t.tourAgain}</ActionButton>}
           <ActionButton onClick={() => api.quit()}>{t.quit}</ActionButton>
         </div>
       </Card>

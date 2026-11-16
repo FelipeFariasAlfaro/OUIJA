@@ -1,11 +1,22 @@
 import { app, dialog, ipcMain, shell, type IpcMainEvent, type IpcMainInvokeEvent } from 'electron'
 import type { AiSaveInput } from '@shared/ai'
-import { IPC, type AppInfo, type ExportResult, type Settings } from '@shared/ipc'
+import { IPC, type AppInfo, type ExportResult, type PresentResult, type Settings } from '@shared/ipc'
+import type { Lang } from '@shared/langs'
 import type { MediumCore } from './core/medium'
 import { suggestFolders } from './core/setup'
 import { AI_PROVIDER_IDS } from '@shared/ai'
 import { asOneOf, asString, isTrustedSender } from './security'
 import type { PaletteWindow } from './window'
+
+/** Botón de los diálogos del sistema, en el idioma de la interfaz. */
+const DIALOG: Record<Lang, { save: string; add: string; resurrect: string; present: string }> = {
+  es: { save: 'Guardar aquí', add: 'Entregar a OUIJA', resurrect: 'Resucitar aquí', present: 'Traer aquí' },
+  en: { save: 'Save here', add: 'Add to OUIJA', resurrect: 'Resurrect here', present: 'Bring it here' },
+  pt: { save: 'Salvar aqui', add: 'Entregar ao OUIJA', resurrect: 'Ressuscitar aqui', present: 'Trazer para cá' },
+  fr: { save: 'Enregistrer ici', add: 'Confier à OUIJA', resurrect: 'Ressusciter ici', present: 'Ramener ici' },
+  ja: { save: 'ここに保存', add: 'OUIJA に渡す', resurrect: 'ここに復活', present: 'ここに持ってくる' },
+  zh: { save: '保存到这里', add: '交给 OUIJA', resurrect: '在此复活', present: '带到这里' }
+}
 
 export interface IpcContext {
   core: MediumCore
@@ -16,6 +27,8 @@ export interface IpcContext {
   /** Se llama tras cambiar la configuración (para reaplicar atajo, menú, etc.). */
   onSettingsChanged(after: Settings, before: Settings): void
   getSettings(): Settings
+  /** JSON para el `mcp.json` de un agente, con las rutas de esta instalación. */
+  mcpConfig(): string
 }
 
 /**
@@ -55,13 +68,26 @@ export function registerIpc(ctx: IpcContext): void {
     const file = asString(path, 'ruta')
     await core.requireIndexed(file) // antes de molestar al usuario con un diálogo
     const chosen = await palette.withoutHiding(() =>
-      dialog.showOpenDialog(palette.win, { properties: ['openDirectory', 'createDirectory'], buttonLabel: ctx.getSettings().lang === 'es' ? 'Guardar aquí' : 'Save here' })
+      dialog.showOpenDialog(palette.win, { properties: ['openDirectory', 'createDirectory'], buttonLabel: DIALOG[ctx.getSettings().lang].save })
     )
     if (chosen.canceled || chosen.filePaths.length === 0) return { savedTo: null }
     const saved = await core.exportTo(file, chosen.filePaths[0])
     shell.showItemInFolder(saved)
     return { savedTo: saved }
   })
+
+  handle(IPC.bringToPresent, async (_e, path): Promise<PresentResult> => {
+    const file = asString(path, 'ruta')
+    await core.requireIndexed(file)
+    const chosen = await palette.withoutHiding(() =>
+      dialog.showOpenDialog(palette.win, { properties: ['openDirectory', 'createDirectory'], buttonLabel: DIALOG[ctx.getSettings().lang].present })
+    )
+    if (chosen.canceled || chosen.filePaths.length === 0) return { savedTo: null }
+    const r = await core.bringToPresent(file, chosen.filePaths[0])
+    shell.showItemInFolder(r.savedTo)
+    return r
+  })
+  handle(IPC.mcpConfig, () => ctx.mcpConfig())
 
   handle(IPC.getSettings, () => ctx.getSettings())
   handle(IPC.setSettings, async (_e, patch) => {
@@ -77,7 +103,7 @@ export function registerIpc(ctx: IpcContext): void {
   })
   handle(IPC.addFolder, async () => {
     const chosen = await palette.withoutHiding(() =>
-      dialog.showOpenDialog(palette.win, { properties: ['openDirectory'], buttonLabel: ctx.getSettings().lang === 'es' ? 'Entregar a OUIJA' : 'Add to OUIJA' })
+      dialog.showOpenDialog(palette.win, { properties: ['openDirectory'], buttonLabel: DIALOG[ctx.getSettings().lang].add })
     )
     if (chosen.canceled || chosen.filePaths.length === 0) return ctx.getSettings()
     const before = ctx.getSettings()
@@ -93,6 +119,7 @@ export function registerIpc(ctx: IpcContext): void {
     return after
   })
 
+  handle(IPC.fileKinds, () => core.fileKinds())
   handle(IPC.recentChanges, (_e, limit) => core.recentChanges(typeof limit === 'number' ? limit : 30))
   handle(IPC.trashList, () => core.trashOverview())
   handle(IPC.trashRestore, async (_e, ids, destination) => {
@@ -101,7 +128,7 @@ export function registerIpc(ctx: IpcContext): void {
     let dir: string | undefined
     if (where === 'choose') {
       const chosen = await palette.withoutHiding(() =>
-        dialog.showOpenDialog(palette.win, { properties: ['openDirectory', 'createDirectory'], buttonLabel: ctx.getSettings().lang === 'es' ? 'Resucitar aquí' : 'Resurrect here' })
+        dialog.showOpenDialog(palette.win, { properties: ['openDirectory', 'createDirectory'], buttonLabel: DIALOG[ctx.getSettings().lang].resurrect })
       )
       if (chosen.canceled || chosen.filePaths.length === 0) return { canceled: true, results: [] }
       dir = chosen.filePaths[0]
@@ -173,6 +200,7 @@ export function registerIpc(ctx: IpcContext): void {
     })
   }
   onTrusted(IPC.minimize, () => palette.minimize())
+  onTrusted(IPC.toggleMaximize, () => palette.toggleMaximize())
   onTrusted(IPC.quit, () => app.quit())
 
   core.onState((state) => palette.send(IPC.onIndexState, state))

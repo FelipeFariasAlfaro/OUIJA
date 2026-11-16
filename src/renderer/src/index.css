@@ -13,3 +13,101 @@ body,
   color: #e7e5f2;
   font-family: system-ui, sans-serif;
 }
+
+/* --- Tormenta de la bienvenida ------------------------------------------- */
+.storm-fog {
+  background:
+    radial-gradient(40% 60% at 20% 40%, rgba(76, 29, 149, 0.45), transparent 70%),
+    radial-gradient(35% 55% at 55% 30%, rgba(30, 27, 75, 0.7), transparent 70%),
+    radial-gradient(45% 60% at 85% 45%, rgba(91, 33, 182, 0.35), transparent 70%);
+  filter: blur(18px);
+  animation: storm-drift 26s ease-in-out infinite alternate;
+}
+.storm-fog-slow {
+  animation-duration: 41s;
+  animation-direction: alternate-reverse;
+}
+@keyframes storm-drift {
+  from { transform: translateX(-6%); }
+  to { transform: translateX(6%); }
+}
+/* Destello doble, como un rayo de verdad: fogonazo, baja, otro fogonazo y se apaga. */
+.storm-flash,
+.storm-bolt {
+  animation: storm-flash 0.9s ease-out forwards;
+}
+@keyframes storm-flash {
+  0% { opacity: 0; }
+  6% { opacity: 1; }
+  16% { opacity: 0.15; }
+  26% { opacity: 0.9; }
+  55% { opacity: 0.25; }
+  100% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .storm-fog { animation: none; }
+}
+/* Fantasmas que cruzan por detrás: flotan de lado a lado, suben y bajan, y titilan. */
+.storm-ghost {
+  left: 0;
+  filter: blur(1.5px) drop-shadow(0 0 14px rgba(167, 139, 250, 0.6));
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+.storm-ghost-right { animation-name: storm-ghost-right; }
+.storm-ghost-left { animation-name: storm-ghost-left; }
+@keyframes storm-ghost-right {
+  from { transform: translateX(-160px); }
+  to { transform: translateX(calc(100vw + 40px)); }
+}
+@keyframes storm-ghost-left {
+  from { transform: translateX(calc(100vw + 40px)); }
+  to { transform: translateX(-160px); }
+}
+.storm-ghost-bob {
+  animation: storm-ghost-bob 4.5s ease-in-out infinite;
+}
+@keyframes storm-ghost-bob {
+  0%, 100% { translate: 0 0; opacity: 1; }
+  50% { translate: 0 -14px; opacity: 0.55; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .storm-ghost, .storm-ghost-bob { animation: none; }
+  .storm-ghost { display: none; }
+}
+
+/* --- Fondo de la aplicación ---------------------------------------------- */
+.ambience-fog {
+  background:
+    radial-gradient(35% 60% at 15% 70%, rgba(76, 29, 149, 0.3), transparent 70%),
+    radial-gradient(40% 55% at 50% 80%, rgba(49, 46, 129, 0.38), transparent 70%),
+    radial-gradient(35% 60% at 85% 70%, rgba(91, 33, 182, 0.26), transparent 70%);
+  filter: blur(22px);
+  animation: storm-drift 34s ease-in-out infinite alternate;
+}
+.ambience-fog-slow {
+  animation-duration: 53s;
+  animation-direction: alternate-reverse;
+}
+/* Relámpago lejano: sin rayo, solo un resplandor doble y suave en el cielo. */
+.ambience-flash {
+  animation: ambience-flash 1.4s ease-out forwards;
+}
+@keyframes ambience-flash {
+  0% { opacity: 0; }
+  8% { opacity: 1; }
+  18% { opacity: 0.2; }
+  30% { opacity: 0.75; }
+  100% { opacity: 0; }
+}
+.ambience-ghost {
+  left: 0;
+  filter: blur(2px) drop-shadow(0 0 14px rgba(167, 139, 250, 0.6));
+  animation-timing-function: linear;
+  animation-iteration-count: 1;
+  animation-fill-mode: forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ambience-fog { animation: none; }
+  .ambience-flash, .ambience-ghost { display: none; }
+}

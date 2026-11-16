@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { AI_PROVIDER_IDS, AI_PROVIDERS, type AiConfig, type AiErrorCode, type AiModel, type AiProviderId } from '@shared/ai'
 import { api } from '../api'
 import { ActionButton } from '../components/ui'
+import { ProviderLogo } from './ProviderLogo'
 import { useI18n, type Dict } from '../i18n'
 
 type Stage = 'mode' | 'provider' | 'key' | 'model'
@@ -36,7 +37,23 @@ function Card({ selected, title, text, badge, onClick }: { selected: boolean; ti
  * Elegir el modelo de lenguaje: local o de un servicio externo. Flujo externo: proveedor → clave →
  * validar → modelos de esa clave → probar y guardar. La clave solo se escribe una vez y no vuelve a verse.
  */
-export default function AiWizard({ config, onSaved, onCancel, onLater }: { config: AiConfig; onSaved: (c: AiConfig) => void; onCancel?: () => void; onLater?: () => void }) {
+export default function AiWizard({
+  config,
+  onSaved,
+  onCancel,
+  onLater,
+  heading,
+  centered
+}: {
+  config: AiConfig
+  onSaved: (c: AiConfig) => void
+  onCancel?: () => void
+  onLater?: () => void
+  /** Título que va junto al contenido (centrado con él). */
+  heading?: ReactNode
+  /** Centra el contenido en vertical, con los botones abajo (pantalla de bienvenida). */
+  centered?: boolean
+}) {
   const { t } = useI18n()
   const [stage, setStage] = useState<Stage>('mode')
   const [mode, setMode] = useState<'local' | 'remote'>(config.mode)
@@ -115,6 +132,8 @@ export default function AiWizard({ config, onSaved, onCancel, onLater }: { confi
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
+      <div className={centered ? 'mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col justify-center overflow-y-auto' : 'contents'}>
+      {heading}
       {stage === 'mode' && (
         <>
           <p className="text-[12px] leading-relaxed text-zinc-500">{t.aiSub}</p>
@@ -136,10 +155,15 @@ export default function AiWizard({ config, onSaved, onCancel, onLater }: { confi
                 role="radio"
                 aria-checked={provider === id}
                 onClick={() => setProvider(id)}
-                className={`rounded-xl border px-3.5 py-3 text-left transition-colors ${provider === id ? 'border-violet-400/60 bg-violet-400/10' : 'border-white/10 hover:bg-white/[0.04]'}`}
+                className={`flex items-center gap-3 rounded-xl border px-3.5 py-3 text-left transition-colors ${provider === id ? 'border-violet-400/60 bg-violet-400/10' : 'border-white/10 hover:bg-white/[0.04]'}`}
               >
-                <span className="block text-sm font-medium text-zinc-100">{AI_PROVIDERS[id].name}</span>
-                <span className="block text-[11px] text-zinc-500">{keyed.includes(id) ? `✓ ${t.aiKeyStored}` : AI_PROVIDERS[id].keyHint}</span>
+                <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors ${provider === id ? 'bg-violet-400/20 text-violet-200' : 'bg-white/[0.05] text-violet-300/80'}`}>
+                  <ProviderLogo id={id} />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-sm font-medium text-zinc-100">{AI_PROVIDERS[id].name}</span>
+                  <span className="block text-[11px] text-zinc-500">{keyed.includes(id) ? `✓ ${t.aiKeyStored}` : AI_PROVIDERS[id].keyHint}</span>
+                </span>
               </button>
             ))}
           </div>
@@ -148,7 +172,8 @@ export default function AiWizard({ config, onSaved, onCancel, onLater }: { confi
 
       {stage === 'key' && (
         <>
-          <h3 className="text-sm font-semibold text-zinc-100">
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-zinc-100">
+            <ProviderLogo id={provider} className="h-4 w-4 text-violet-300" />
             {info.name} · {t.aiKeyTitle}
           </h3>
           <p className="mt-1 text-[11px] text-zinc-500">
@@ -182,7 +207,8 @@ export default function AiWizard({ config, onSaved, onCancel, onLater }: { confi
 
       {stage === 'model' && (
         <>
-          <h3 className="text-sm font-semibold text-zinc-100">
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-zinc-100">
+            <ProviderLogo id={provider} className="h-4 w-4 text-violet-300" />
             {info.name} · {t.aiModelTitle}
           </h3>
           <p className="mt-0.5 text-[11px] text-zinc-500">{t.aiModelsFound(models.length)}</p>
@@ -225,6 +251,8 @@ export default function AiWizard({ config, onSaved, onCancel, onLater }: { confi
           {failure?.message && failure.error !== 'invalid-input' && failure.error !== 'missing-key' && <span className="mt-0.5 block truncate text-[10px] text-rose-300/60" title={failure.message}>{failure.message}</span>}
         </p>
       )}
+
+      </div>
 
       <div className="mt-auto flex items-center gap-2 pt-3">
         {(stage !== 'mode' || onCancel) && (

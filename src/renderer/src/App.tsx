@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { IndexState, Settings } from '@shared/ipc'
+import { AI_PROVIDERS } from '@shared/ai'
 import { api } from './api'
 import { GhostIcon } from './components/ui'
+import Ambience from './components/Ambience'
+import Tour from './components/Tour'
 import WindowControls from './components/WindowControls'
 import { I18nContext, makeI18n, type Lang } from './i18n'
 import GallowsView from './views/GallowsView'
@@ -20,6 +23,7 @@ export default function App() {
   const [view, setView] = useState<View>('search')
   const [settings, setSettings] = useState<Settings | null>(null)
   const [index, setIndex] = useState<IndexState>(IDLE)
+  const [touring, setTouring] = useState(false)
   const lang: Lang = settings?.lang ?? 'es'
   const i18n = useMemo(() => makeI18n(lang), [lang])
   const { t } = i18n
@@ -40,6 +44,24 @@ export default function App() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
+  // El recorrido se muestra una vez, al terminar la bienvenida (con un respiro para que aparezca el contador).
+  useEffect(() => {
+    if (!settings?.onboarded || settings.tourDone) return
+    const timer = setTimeout(() => {
+      setView('search')
+      setTouring(true)
+    }, 900)
+    return () => clearTimeout(timer)
+  }, [settings?.onboarded, settings?.tourDone])
+  const endTour = useCallback(() => {
+    setTouring(false)
+    void api.setSettings({ tourDone: true }).then(setSettings)
+  }, [])
+  const startTour = useCallback(() => {
+    setView('search')
+    setTouring(true)
   }, [])
 
   const addFolder = useCallback(() => void api.addFolder().then(setSettings), [])
@@ -68,13 +90,14 @@ export default function App() {
   return (
     <I18nContext.Provider value={i18n}>
       <div
-        className="relative flex h-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0d0d16]"
+        className="relative isolate flex h-full flex-col overflow-hidden bg-[#0d0d16]"
         style={{
           backgroundImage:
             'radial-gradient(600px 220px at 50% -60px, rgba(139,92,246,.22), transparent 70%), radial-gradient(400px 200px at 100% 100%, rgba(99,102,241,.10), transparent 70%)'
         }}
       >
-        <header className="flex items-center gap-1 px-4 pb-3 pt-3.5 [-webkit-app-region:drag]">
+        {settings?.ambience !== false && <Ambience />}
+        <header onDoubleClick={(e) => e.target === e.currentTarget && api.toggleMaximize()} className="mb-2 flex items-center gap-1 px-4 pb-3 pt-3.5 [-webkit-app-region:drag]">
           <div className="mr-3 flex items-center gap-2 text-sm font-semibold text-violet-200">
             <GhostIcon className="h-5 w-5" /> OUIJA
           </div>
@@ -83,6 +106,7 @@ export default function App() {
               <button
                 key={tab.id}
                 type="button"
+                data-tour={`tab-${tab.id}`}
                 onClick={() => setView(tab.id)}
                 className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${view === tab.id ? 'bg-violet-400/15 text-violet-200' : 'text-zinc-400 hover:text-zinc-200'}`}
               >
@@ -92,15 +116,28 @@ export default function App() {
           </nav>
           <div className="ml-auto flex items-center gap-3">
             {busy && (
-              <button type="button" onClick={() => setView('settings')} className="flex items-center gap-1.5 rounded-full bg-violet-400/10 px-2 py-0.5 text-[11px] text-violet-200 [-webkit-app-region:no-drag]">
+              <button type="button" data-tour="progress" onClick={() => setView('settings')} className="flex items-center gap-1.5 rounded-full bg-violet-400/10 px-2 py-0.5 text-[11px] text-violet-200 [-webkit-app-region:no-drag]">
                 <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-violet-300" />
                 {index.total > 0 ? `${index.processed}/${index.total}` : '…'}
               </button>
             )}
-            <span className="flex items-center gap-1.5 text-[11px] text-zinc-500">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-              {t.localBadge}
-            </span>
+            {settings?.ai.mode === 'remote' && settings.ai.provider ? (
+              <button
+                type="button"
+                data-tour="local"
+                onClick={() => setView('settings')}
+                title={t.remoteBadgeHelp}
+                className="flex items-center gap-1.5 text-[11px] text-zinc-400 [-webkit-app-region:no-drag] hover:text-zinc-200"
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-violet-400" />
+                {t.remoteBadge(AI_PROVIDERS[settings.ai.provider].name)}
+              </button>
+            ) : (
+              <span data-tour="local" className="flex items-center gap-1.5 text-[11px] text-zinc-500">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                {t.localBadge}
+              </span>
+            )}
             <WindowControls />
           </div>
         </header>
@@ -109,7 +146,9 @@ export default function App() {
         {view === 'ghosts' && <GhostsView key={`${lang}-${index.phase}`} />}
         {view === 'people' && <PeopleView key={`${lang}-${index.phase}`} />}
         {view === 'gallows' && <GallowsView key={lang} />}
-        {view === 'settings' && settings && <SettingsView settings={settings} index={index} onSettings={setSettings} />}
+        {view === 'settings' && settings && <SettingsView settings={settings} index={index} onSettings={setSettings} onTour={startTour} />}
+
+        {touring && <Tour onDone={endTour} />}
 
         <footer className="flex items-center gap-4 border-t border-white/5 px-4 py-2 text-[11px] text-zinc-500">
           <span>

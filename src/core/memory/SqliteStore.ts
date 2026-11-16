@@ -38,6 +38,8 @@ export class SqliteStore implements MemoryStore, EntityStore {
     this.db = new DatabaseSync(location, { allowExtension: true })
     // En la aplicación empaquetada la librería nativa está fuera del .asar: el sistema no puede cargarla desde dentro.
     this.db.loadExtension(sqliteVec.getLoadablePath().replace(/app\.asar([\\/])/, 'app.asar.unpacked$1'))
+    // La aplicación y el servidor MCP pueden tener el índice abierto a la vez: lectores y escritor no se bloquean.
+    if (location !== ':memory:') this.db.exec('pragma journal_mode = wal; pragma busy_timeout = 5000;')
     this.migrate()
   }
 
@@ -267,6 +269,11 @@ export class SqliteStore implements MemoryStore, EntityStore {
     return rows.map((r) => r.text as string).join('\n')
   }
 
+  async extensionCounts(): Promise<{ ext: string; count: number }[]> {
+    const rows = this.db.prepare('select ext, count(*) as n from files group by ext').all() as Row[]
+    return rows.map((r) => ({ ext: r.ext as string, count: r.n as number }))
+  }
+
   async listFiles(filter?: FileFilter): Promise<IndexedDoc[]> {
     const { clause, params } = this.filterSql(filter)
     const rows = this.db
@@ -478,6 +485,10 @@ export class SqliteStore implements MemoryStore, EntityStore {
     if (filter?.extensions && filter.extensions.length > 0) {
       parts.push(`f.ext in (${filter.extensions.map(() => '?').join(',')})`)
       params.push(...filter.extensions.map((e) => e.toLowerCase()))
+    }
+    if (filter?.excludeExtensions && filter.excludeExtensions.length > 0) {
+      parts.push(`f.ext not in (${filter.excludeExtensions.map(() => '?').join(',')})`)
+      params.push(...filter.excludeExtensions.map((e) => e.toLowerCase()))
     }
     if (filter?.folder) {
       parts.push('substr(f.path, 1, ?) = ?')

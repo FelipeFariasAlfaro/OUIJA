@@ -3,8 +3,12 @@ import type { Lang } from '@shared/types'
 
 const LABELS = {
   es: { open: 'Abrir OUIJA', index: 'Indexar ahora', quit: 'Salir' },
-  en: { open: 'Open OUIJA', index: 'Index now', quit: 'Quit' }
-} as const
+  en: { open: 'Open OUIJA', index: 'Index now', quit: 'Quit' },
+  pt: { open: 'Abrir OUIJA', index: 'Indexar agora', quit: 'Sair' },
+  fr: { open: 'Ouvrir OUIJA', index: 'Indexer maintenant', quit: 'Quitter' },
+  ja: { open: 'OUIJA を開く', index: '今すぐインデックス', quit: '終了' },
+  zh: { open: '打开 OUIJA', index: '立即索引', quit: '退出' }
+} as const satisfies Record<Lang, unknown>
 
 export interface TrayActions {
   open(): void

@@ -98,3 +98,22 @@
 - [x] 15. Rename and release automation
   - [x] 15.1 Rename the app to OUIJA and redraw the logo
   - [x] 15.2 GitHub Actions workflow that builds Windows and Linux installers and publishes a release on every push to `main`
+
+- [x] 16. File types in searches
+  - [x] 16.1 Per-extension counts in the store and `excludeExtensions` filter in search
+  - [x] 16.2 `excludedKinds` setting and Settings card with the types found
+  - [x] 16.3 Unit and e2e tests
+  - _Requirements: R14_
+
+- [x] 17. Guided tour
+  - [x] 17.1 Spotlight tour after onboarding: indexing counter, search, each tab and the local badge
+  - [x] 17.2 Shown once (`tourDone`), skippable with Esc, replayable from Settings
+
+- [x] 18. Resurrection of desktop search
+  - [x] 18.1 Read-only MCP server (stdio, JSON-RPC) on a passive core; `--mcp` mode and Node entry; config in Settings
+  - [x] 18.2 Portuguese, French, Japanese and Chinese (UI, answers, tray, dialogs, file kinds)
+  - [x] 18.3 "Bring to the present": DOCX/XLSX via LibreOffice or recovered Markdown, never overwriting
+  - [x] 18.4 Unit tests (MCP protocol, languages) and e2e (real MCP over stdio with the app open, languages, bring to the present)
+  - _Requirements: R15, R16, R17_
+
+- [x] 19. Release 0.2.0: README framed around the resurrection of desktop search; the release takes the version from `package.json` and only bumps the patch if that tag already exists

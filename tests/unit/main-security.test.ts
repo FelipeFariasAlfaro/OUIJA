@@ -82,7 +82,7 @@ describe('configuración', () => {
     const s = sanitizeSettings({
       folders: ['/home/ana/Docs', 'relativa', 42, '/home/ana/Docs'],
       staleYears: 999,
-      lang: 'fr',
+      lang: 'klingon',
       shortcut: '',
       ollamaHost: 'https://remoto.com',
       embedDimensions: -5,
@@ -91,6 +91,7 @@ describe('configuración', () => {
     expect(s.folders).toEqual(['/home/ana/Docs'])
     expect(s.staleYears).toBe(DEFAULT_SETTINGS.staleYears)
     expect(s.lang).toBe('es')
+    for (const lang of ['pt', 'fr', 'ja', 'zh']) expect(sanitizeSettings({ lang }).lang).toBe(lang)
     expect(s.shortcut).toBe(DEFAULT_SETTINGS.shortcut)
     expect(s.ollamaHost).toBe(DEFAULT_SETTINGS.ollamaHost)
     expect(s.embedDimensions).toBe(DEFAULT_SETTINGS.embedDimensions)
@@ -121,5 +122,27 @@ describe('configuración', () => {
     await store.load()
     store.value.folders.push('/x')
     expect(store.value.folders).toEqual([])
+  })
+})
+describe('tipos excluidos de las búsquedas', () => {
+  it('por defecto no excluye nada y solo acepta tipos válidos, sin repetidos', () => {
+    expect(DEFAULT_SETTINGS.excludedKinds).toEqual([])
+    expect(sanitizeSettings({ excludedKinds: ['audio', 'audio', 'video', 'inventado', 7] }).excludedKinds).toEqual(['audio', 'video'])
+    expect(sanitizeSettings({ excludedKinds: 'audio' }).excludedKinds).toEqual([])
+    expect(sanitizeSettings({}, { ...DEFAULT_SETTINGS, excludedKinds: ['audio'] }).excludedKinds).toEqual(['audio'])
+  })
+})
+describe('recorrido guiado', () => {
+  it('lo ve quien termina la bienvenida, no quien ya usaba la app', async () => {
+    expect(DEFAULT_SETTINGS.tourDone).toBe(false)
+    const fresh = join(tmp, 'tour-nuevo.json')
+    writeFileSync(fresh, JSON.stringify({ onboarded: false }))
+    expect((await new SettingsStore(fresh).load()).tourDone).toBe(false)
+    const old = join(tmp, 'tour-antiguo.json')
+    writeFileSync(old, JSON.stringify({ onboarded: true, folders: ['/home/ana'] }))
+    expect((await new SettingsStore(old).load()).tourDone).toBe(true)
+    const pending = join(tmp, 'tour-pendiente.json')
+    writeFileSync(pending, JSON.stringify({ onboarded: true, tourDone: false }))
+    expect((await new SettingsStore(pending).load()).tourDone).toBe(false)
   })
 })

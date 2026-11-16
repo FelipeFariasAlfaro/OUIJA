@@ -3,6 +3,8 @@ import { dirname, isAbsolute, resolve } from 'node:path'
 import { DEFAULT_EXCLUDED_DIRS } from '@core/indexing'
 import { assertLocalHost, DEFAULT_EMBED_MODEL, DEFAULT_OLLAMA_HOST } from '@core/ai/ollama'
 import { DEFAULT_AI, isAiProvider, type AiSettings } from '@shared/ai'
+import { ALL_KINDS, type FileKind } from '@shared/filetypes'
+import { isLang } from '@shared/langs'
 import type { Settings } from '@shared/ipc'
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -19,7 +21,10 @@ export const DEFAULT_SETTINGS: Settings = {
   indexOnStart: true,
   watchFolders: true,
   ocrImages: true,
+  excludedKinds: [],
   onboarded: false,
+  tourDone: false,
+  ambience: true,
   ai: { ...DEFAULT_AI }
 }
 
@@ -64,7 +69,7 @@ export function sanitizeSettings(raw: unknown, base: Settings = DEFAULT_SETTINGS
     excludeDirs: strings(o.excludeDirs, base.excludeDirs),
     includeHidden: bool(o.includeHidden, base.includeHidden),
     staleYears: int(o.staleYears, base.staleYears, 1, 50),
-    lang: o.lang === 'es' || o.lang === 'en' ? o.lang : base.lang,
+    lang: isLang(o.lang) ? o.lang : base.lang,
     shortcut: str(o.shortcut, base.shortcut, 60),
     ollamaHost,
     embedModel: str(o.embedModel, base.embedModel, 100),
@@ -73,7 +78,10 @@ export function sanitizeSettings(raw: unknown, base: Settings = DEFAULT_SETTINGS
     indexOnStart: bool(o.indexOnStart, base.indexOnStart),
     watchFolders: bool(o.watchFolders, base.watchFolders),
     ocrImages: bool(o.ocrImages, base.ocrImages),
+    excludedKinds: Array.isArray(o.excludedKinds) ? [...new Set(o.excludedKinds.filter((k): k is FileKind => typeof k === 'string' && (ALL_KINDS as string[]).includes(k)))] : base.excludedKinds,
     onboarded: bool(o.onboarded, base.onboarded),
+    tourDone: bool(o.tourDone, base.tourDone),
+    ambience: bool(o.ambience, base.ambience),
     ai: o.ai === undefined ? base.ai : sanitizeAi(o.ai, base.ai)
   }
 }
@@ -85,7 +93,7 @@ export class SettingsStore {
   constructor(private readonly file: string) {}
 
   get value(): Settings {
-    return { ...this.current, folders: [...this.current.folders], excludeDirs: [...this.current.excludeDirs], ai: { ...this.current.ai } }
+    return { ...this.current, folders: [...this.current.folders], excludeDirs: [...this.current.excludeDirs], excludedKinds: [...this.current.excludedKinds], ai: { ...this.current.ai } }
   }
 
   async load(): Promise<Settings> {
@@ -95,6 +103,8 @@ export class SettingsStore {
       // Quien ya tenía carpetas antes de que existiera la bienvenida no debe verla.
       const hadSetup = typeof raw === 'object' && raw !== null && !('onboarded' in raw) && this.current.folders.length > 0
       if (hadSetup) this.current = { ...this.current, onboarded: true }
+      // Quien ya usaba la app antes de que existiera el recorrido no lo ve de golpe (puede abrirlo desde Ajustes).
+      if (typeof raw === 'object' && raw !== null && !('tourDone' in raw) && this.current.onboarded) this.current = { ...this.current, tourDone: true }
     } catch {
       this.current = { ...DEFAULT_SETTINGS } // no existe o está dañado
     }

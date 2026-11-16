@@ -1,6 +1,6 @@
 # Product: OUIJA
 
-Desktop app (Windows and Linux, Electron) for personal digital archaeology: it resurrects files in old or damaged formats, makes them searchable by meaning, tells the story of forgotten files and reconstructs who appears in your past. Kiroween Hackathon 2026 project, Resurrection category. It must be original: do not copy code from other projects.
+Desktop app (Windows and Linux, Electron) that resurrects desktop search (Google Desktop Search, 2004–2011) with local AI, for personal digital archaeology: it resurrects files in old or damaged formats, makes them searchable by meaning, tells the story of forgotten files and reconstructs who appears in your past. Kiroween Hackathon 2026 project, Resurrection category. It must be original: do not copy code from other projects.
 
 ## Principles
 
@@ -10,6 +10,7 @@ Desktop app (Windows and Linux, Electron) for personal digital archaeology: it r
 - Answers cite only paths that exist in the index. If nothing matches, say so.
 - Obituaries and timelines use only data present in the index. Do not invent facts.
 - Recovered text always shows its confidence level.
+- The MCP server is read-only: no tool may modify, move or delete the user's files.
 - GLIA is only an optional adapter behind `MemoryStore`. The product does not depend on it.
 - v1 scope: TXT, MD, PDF, DOCX, RTF; DOC/WPD/WPS via LibreOffice; forensic rescue for the rest; ZIP containers (and 7z/RAR/ARJ/LZH with optional `7z`). No floppy or CD images.
 
