@@ -6,6 +6,7 @@ All notable changes to OUIJA. The format follows [Keep a Changelog](https://keep
 
 ### Changed
 - Latest changes: hovering a file shows "Show folder" and "Open file".
+- README: features list updated (Summon filters, Crypt guide, About, automatic updates, Exorcism).
 
 ## [0.5.0] - 2026-11-16
 

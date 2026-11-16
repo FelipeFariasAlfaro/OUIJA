@@ -29,15 +29,16 @@ And it resurrects what those files meant:
 
 ## Features
 
-1. **Ask the board.** "Where is the poem I wrote for Rosa?" → the 2019 document and its 2008 draft **inside a backup**, marked *Resurrected*, with its confidence level.
+1. **Summon.** Ask the board: "Where is the poem I wrote for Rosa?" → the 2019 document and its 2008 draft **inside a backup**, marked *Resurrected*, with its confidence level. Narrow it with **filters** by file type and date; hover a result (or a file in *Latest changes*) to open it or show its folder.
 2. **Resurrection of dead formats.** LibreOffice conversion when available; otherwise forensic rescue from the raw bytes, encoding detection (CP437, CP850, Latin-1) and mojibake repair ("Ã±" → "ñ").
 3. **Every file type is findable** by name, folder and type (images, audio, video, code…); small images are read with OCR.
-4. **Ghost autopsy**, **People / Specters** with timelines (merge "Rosita" with "Rosa"), and **live change detection**.
+4. **Ghost autopsy** with search and filters, **People / Specters** with timelines (merge "Rosita" with "Rosa"), and **live change detection**.
 5. **Voices from beyond.** MSN Messenger history (2006) becomes a readable conversation; Outlook Express `.dbx` folders and `.mbox` mailboxes are rescued; photos are dated by when they were taken (EXIF), not when they were copied.
-6. **The Crypt** and its exportable **grimoire** (PDF).
+6. **The Crypt** and its exportable **grimoire** (PDF), with a **(?)** guide that shows the real status of each step and fixes what is missing.
 7. **MCP server.** Kiro, Claude Desktop or any MCP agent can ask OUIJA where your files are and read the ones it resurrected. Settings shows the configuration ready to paste.
 8. **Six languages:** Spanish, English, Portuguese, French, Japanese and Chinese.
-9. **A haunted interface** that serves the function: séance metaphor, storm and ghosts on the welcome screen, subtle fog and distant lightning in the app, and a guided tour.
+9. **A haunted interface** that serves the function: séance metaphor, storm and ghosts on the welcome screen, subtle fog and distant lightning in the app, a guided tour, and a sinister **About** (?) with a tombstone.
+10. **Automatic updates** from GitHub Releases, and an **Exorcism** in Settings that erases all of OUIJA's data (never your files) and starts again from the welcome screen.
 
 ## Autopsy report
 
