@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { scanFolder } from '@core/indexing'
 
-const root = mkdtempSync(join(tmpdir(), 'medium-scan-'))
+const root = mkdtempSync(join(tmpdir(), 'ouija-scan-'))
 afterAll(() => rmSync(root, { recursive: true, force: true }))
 
 const put = (rel: string, data = 'x') => {

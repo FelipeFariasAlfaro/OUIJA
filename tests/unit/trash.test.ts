@@ -10,7 +10,7 @@ let trash: string
 let work: string
 
 beforeEach(() => {
-  home = mkdtempSync(join(tmpdir(), 'medium-trash-'))
+  home = mkdtempSync(join(tmpdir(), 'ouija-trash-'))
   trash = join(home, '.local', 'share', 'Trash')
   work = join(home, 'Documentos')
   mkdirSync(join(trash, 'files'), { recursive: true })
@@ -29,8 +29,8 @@ function trashFile(name: string, original: string, content = 'contenido', date =
 
 describe('formato de la papelera (freedesktop)', () => {
   it('lee la ruta con %-codificación y la fecha local, tal como la escribe el sistema', () => {
-    const info = parseTrashInfo('[Trash Info]\nPath=/home/ana/.medium-trash-test/prueba%20medium%20%C3%B1and%C3%BA.txt\nDeletionDate=2026-11-15T14:28:11\n')
-    expect(info.originalPath).toBe('/home/ana/.medium-trash-test/prueba medium ñandú.txt')
+    const info = parseTrashInfo('[Trash Info]\nPath=/home/ana/.ouija-trash-test/prueba%20ouija%20%C3%B1and%C3%BA.txt\nDeletionDate=2026-11-15T14:28:11\n')
+    expect(info.originalPath).toBe('/home/ana/.ouija-trash-test/prueba ouija ñandú.txt')
     expect(info.trashedAt).toBe(new Date(2026, 10, 15, 14, 28, 11).getTime())
   })
 

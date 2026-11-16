@@ -22,7 +22,7 @@ let docs: string
 const seen: { method: string; path: string; key: string | undefined; body: string }[] = []
 
 const call = <T>(fn: string, ...args: unknown[]): Promise<T> =>
-  page.evaluate(([name, a]) => (window as unknown as { medium: Record<string, (...x: unknown[]) => unknown> }).medium[name as string](...(a as unknown[])) as unknown, [fn, args]) as Promise<T>
+  page.evaluate(([name, a]) => (window as unknown as { ouija: Record<string, (...x: unknown[]) => unknown> }).ouija[name as string](...(a as unknown[])) as unknown, [fn, args]) as Promise<T>
 
 beforeAll(async () => {
   provider = createServer((req, res) => {
@@ -47,12 +47,12 @@ beforeAll(async () => {
   await new Promise<void>((ok) => provider.listen(0, '127.0.0.1', ok))
   const base = `http://127.0.0.1:${(provider.address() as AddressInfo).port}`
 
-  data = mkdtempSync(join(tmpdir(), 'medium-ai-data-'))
-  docs = mkdtempSync(join(tmpdir(), 'medium-ai-docs-'))
+  data = mkdtempSync(join(tmpdir(), 'ouija-ai-data-'))
+  docs = mkdtempSync(join(tmpdir(), 'ouija-ai-docs-'))
   mkdirSync(docs, { recursive: true })
   writeFileSync(join(docs, 'poema.txt'), 'Poema para Rosa. Tus manos guardan la luz de marzo, y yo, torpe, aprendo a nombrarla despacio.')
   writeFileSync(join(data, 'settings.json'), JSON.stringify({ folders: [docs], onboarded: true, watchFolders: false, indexOnStart: false, ocrImages: false, lang: 'es' }))
-  app = await electron.launch({ args: [resolve('.'), '--no-sandbox'], env: { ...process.env, MEDIUM_USER_DATA: data, MEDIUM_AI_TEST_BASE: base, ELECTRON_RENDERER_URL: '' } })
+  app = await electron.launch({ args: [resolve('.'), '--no-sandbox'], env: { ...process.env, OUIJA_USER_DATA: data, OUIJA_AI_TEST_BASE: base, ELECTRON_RENDERER_URL: '' } })
   page = await app.firstWindow()
   await page.waitForLoadState('domcontentloaded')
 })
@@ -96,7 +96,7 @@ describe('modelo de lenguaje externo', () => {
     await page.getByText('2 modelos disponibles con tu clave').waitFor()
     expect(await input.count()).toBe(0) // el campo de la clave ya no está
     await page.getByRole('radio', { name: /Opus/ }).click()
-    await page.screenshot({ path: join(tmpdir(), 'medium-ai-modelos.png') })
+    await page.screenshot({ path: join(tmpdir(), 'ouija-ai-modelos.png') })
     await page.getByRole('button', { name: 'Probar y guardar' }).click()
 
     // Ajustes dice qué IA hace cada cosa: las respuestas las da Claude; la búsqueda, el equipo.
@@ -154,7 +154,7 @@ describe('modelo de lenguaje externo', () => {
     await page.keyboard.press('Enter')
     await page.getByText('La clave no es válida o fue revocada.').waitFor({ timeout: 30_000 })
     await page.getByText('El servicio externo no respondió').waitFor()
-    await page.screenshot({ path: join(tmpdir(), 'medium-ai-problema.png') })
+    await page.screenshot({ path: join(tmpdir(), 'ouija-ai-problema.png') })
     expect(await page.getByText('poema.txt').count()).toBeGreaterThan(0) // igual encuentra el archivo
   })
 

@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto'
 import { access, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { basename, dirname, extname, join } from 'node:path'
 import { OllamaClient, OllamaError, pickChatModel } from '@core/ai/ollama'
+import { detectLocalServers, localServerLlm, type LocalServerDeps } from '@core/ai/localServer'
 import { AiError, type ProviderDeps } from '@core/ai/providers'
 import { Orchestrator, type Llm } from '@core/ai/orchestrator'
 import { EntityExtractor, EntityService } from '@core/entities'
@@ -12,7 +13,7 @@ import { convertLegacyToModern, extractText, LEGACY_EXTENSIONS, SHEET_LEGACY_EXT
 import { SqliteStore, type FileFilter } from '@core/memory'
 import { kindOf, type FileKind } from '@shared/filetypes'
 import type { Ghost, Person, PersonSummary, SearchAnswer } from '@shared/types'
-import type { AskFilters, ChangeDto, IndexState, KindCount, NameDecision, OllamaHint, OllamaStatus, RestoreOutcome, Settings, TrashItemDto, TrashOverview } from '@shared/ipc'
+import type { AskFilters, ChangeDto, IndexState, LocalModels, KindCount, NameDecision, OllamaHint, OllamaStatus, RestoreOutcome, Settings, TrashItemDto, TrashOverview } from '@shared/ipc'
 import { AiService } from './ai'
 import type { SecretStore } from './secrets'
 import type { SettingsStore } from './settings'
@@ -29,7 +30,7 @@ export interface ModelClient extends Embedder, Llm {
   probeDimensions(): Promise<number>
 }
 
-export interface MediumCoreDeps {
+export interface OuijaCoreDeps {
   dataDir: string
   settings: SettingsStore
   /** Claves de API de los servicios externos. */
@@ -49,6 +50,8 @@ export interface MediumCoreDeps {
    * enciende el motor local, no cambia la configuración y responde sin modelo de lenguaje.
    */
   passive?: boolean
+  /** Solo pruebas: dónde buscar servidores locales compatibles con OpenAI. */
+  localServers?: LocalServerDeps
 }
 
 const EMPTY_STATE: IndexState = { phase: 'idle', processed: 0, total: 0, indexed: 0, skipped: 0, errors: 0 }
@@ -63,7 +66,7 @@ function defaultClient(s: Settings, chatModel: string | undefined): ModelClient 
  * Núcleo de la aplicación sin dependencias de Electron: reúne el índice, los modelos locales, la
  * búsqueda, los fantasmas y las personas. Lo usa el proceso principal y se prueba por separado.
  */
-export class MediumCore {
+export class OuijaCore {
   private store!: SqliteStore
   private entityService!: EntityService
   private state: IndexState = { ...EMPTY_STATE }
@@ -74,7 +77,7 @@ export class MediumCore {
   private entityTimer: NodeJS.Timeout | undefined
   private models: { at: number; list: string[]; host: string } | null = null
   private readonly now: () => number
-  private readonly makeClient: NonNullable<MediumCoreDeps['createClient']>
+  private readonly makeClient: NonNullable<OuijaCoreDeps['createClient']>
   /** Motor local y modelos: instala lo que falte la primera vez. */
   readonly setup: SetupManager
   /** Modelo de lenguaje local o de un servicio externo. */
@@ -84,7 +87,7 @@ export class MediumCore {
   private changeListeners = new Set<() => void>()
   private rescanTimer: NodeJS.Timeout | undefined
 
-  constructor(private readonly deps: MediumCoreDeps) {
+  constructor(private readonly deps: OuijaCoreDeps) {
     this.now = deps.now ?? Date.now
     this.makeClient = deps.createClient ?? defaultClient
     this.trash = new TrashService(deps.trash)
@@ -182,7 +185,20 @@ export class MediumCore {
   }
 
   /** Ollama con el mejor modelo de chat instalado (o el elegido). `chatModel` es `undefined` si no hay ninguno. */
-  private async localClient(): Promise<{ client: ModelClient; chatModel: string | undefined }> {
+  private async localClient(): Promise<{ client: ModelClient; chatModel: string | undefined; server?: string }> {
+    const server = this.settings.localServer
+    if (server) {
+      // Respuestas de otro programa local (LM Studio, Jan…); los embeddings siguen en Ollama.
+      const embeddings = this.makeClient(this.settings, undefined)
+      const llm = localServerLlm(server.baseUrl, server.model)
+      const client: ModelClient = {
+        embed: (texts) => embeddings.embed(texts),
+        probeDimensions: () => embeddings.probeDimensions(),
+        listModels: () => embeddings.listModels(),
+        complete: (prompt, options) => llm.complete(prompt, options)
+      }
+      return { client, chatModel: server.model, server: server.name ?? server.baseUrl }
+    }
     const models = await this.installedModels()
     const wanted = this.settings.chatModel
     const chatModel = wanted && models?.some((m) => m === wanted || m.startsWith(`${wanted}:`)) ? wanted : models ? pickChatModel(models) : undefined
@@ -228,11 +244,28 @@ export class MediumCore {
     const embedModelInstalled = models.some((m) => m === s.embedModel || m.startsWith(`${s.embedModel}:`))
     const remote = s.ai.mode === 'remote'
     // El modelo local de respuestas, aunque se use un servicio externo: sigue sirviendo para personas y resúmenes.
-    const chatModel = (await this.localClient()).chatModel
+    const { chatModel, server: chatServer } = await this.localClient()
     const hints: OllamaHint[] = []
     if (!embedModelInstalled) hints.push({ code: 'pull-embed', command: `ollama pull ${s.embedModel}` })
     if (!chatModel && !remote) hints.push({ code: 'pull-chat', command: 'ollama pull qwen3.5:4b' })
-    return { available: true, host: s.ollamaHost, models, embedModel: s.embedModel, embedModelInstalled, chatModel, hints }
+    return { available: true, host: s.ollamaHost, models, embedModel: s.embedModel, embedModelInstalled, chatModel, chatServer, hints }
+  }
+
+  /** Modelos locales que pueden responder: los de chat de Ollama y los de servidores compatibles con OpenAI. */
+  async localModels(): Promise<LocalModels> {
+    const [installed, servers] = await Promise.all([this.installedModels(true), detectLocalServers(this.deps.localServers)])
+    // Ollama también expone /v1 en su puerto: no se lista dos veces.
+    const ollamaPort = (() => {
+      try {
+        return new URL(this.settings.ollamaHost).port || '11434'
+      } catch {
+        return '11434'
+      }
+    })()
+    return {
+      ollama: (installed ?? []).filter((m) => !/embed|bge|nomic|minilm|e5|rerank/i.test(m)),
+      servers: servers.filter((s) => !s.baseUrl.endsWith(`:${ollamaPort}`))
+    }
   }
 
   // --- Tipos de archivo ---------------------------------------------------

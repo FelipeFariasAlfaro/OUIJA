@@ -21,7 +21,7 @@ const put = (rel: string, data: string | Buffer) => {
 }
 
 beforeEach(() => {
-  root = mkdtempSync(join(tmpdir(), 'medium-pipe-'))
+  root = mkdtempSync(join(tmpdir(), 'ouija-pipe-'))
   store = new SqliteStore(':memory:', { dimensions: FAKE_DIM })
   embedder = new FakeEmbedder()
   pipeline = new IndexPipeline({ store, embedder })

@@ -1,8 +1,8 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { IPC, type IndexState, type MediumApi, type SetupState, type UpdateState } from '@shared/ipc'
+import { IPC, type IndexState, type OuijaApi, type SetupState, type UpdateState } from '@shared/ipc'
 
 /** Cada método invoca un canal fijo. La interfaz no puede enviar mensajes a otros canales. */
-const api: MediumApi = {
+const api: OuijaApi = {
   ask: (question, filters) => ipcRenderer.invoke(IPC.ask, question, filters),
   ghosts: () => ipcRenderer.invoke(IPC.ghosts),
   people: () => ipcRenderer.invoke(IPC.people),
@@ -24,6 +24,7 @@ const api: MediumApi = {
   ollamaStatus: () => ipcRenderer.invoke(IPC.ollamaStatus),
   appInfo: () => ipcRenderer.invoke(IPC.appInfo),
   fileKinds: () => ipcRenderer.invoke(IPC.fileKinds),
+  localModels: () => ipcRenderer.invoke(IPC.localModels),
   recentChanges: (limit) => ipcRenderer.invoke(IPC.recentChanges, limit),
   trashList: () => ipcRenderer.invoke(IPC.trashList),
   trashRestore: (ids, destination) => ipcRenderer.invoke(IPC.trashRestore, ids, destination),
@@ -73,4 +74,4 @@ const api: MediumApi = {
   }
 }
 
-contextBridge.exposeInMainWorld('medium', api)
+contextBridge.exposeInMainWorld('ouija', api)

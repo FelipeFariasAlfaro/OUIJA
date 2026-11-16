@@ -113,7 +113,7 @@ function manager(f: Fake, over: Partial<SetupDeps> = {}) {
 }
 
 beforeEach(async () => {
-  dir = mkdtempSync(join(tmpdir(), 'medium-setup-'))
+  dir = mkdtempSync(join(tmpdir(), 'ouija-setup-'))
   port = await freePort()
 })
 afterEach(() => rmSync(dir, { recursive: true, force: true }))

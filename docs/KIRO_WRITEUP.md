@@ -6,7 +6,7 @@ OUIJA resurrects **desktop search**, the idea Google Desktop Search (2004–2011
 
 | Kiro feature | Use |
 |---|---|
-| Specs | Yes: `.kiro/specs/medium/` (requirements, design, tasks). |
+| Specs | Yes: `.kiro/specs/ouija/` (requirements, design, tasks). |
 | Steering | Yes: `.kiro/steering/` (product, technical conventions, UI style). |
 | Hooks | Yes: typecheck and tests on saving code. |
 | Property-based tests (PBT) | Yes, with `fast-check`: the properties listed in the spec. |
@@ -17,7 +17,7 @@ OUIJA resurrects **desktop search**, the idea Google Desktop Search (2004–2011
 
 The requirements are written in EARS format ("WHEN… THE system SHALL…") and end with a list of **verifiable properties**. Every task in the plan (`tasks.md`) cites the requirements it covers. Progress was ticked task by task and the design was corrected when reality contradicted it: floppy and CD images were dropped as useless, and indexing of every file type was added when tests with real folders showed that a search tool that only knows documents cannot find a logo.
 
-Compared with "vibe coding", the spec gave two concrete things: a definition of done per task and a contract (`MemoryStore`, `MediumApi`) that allowed building the core without a UI and the UI without the core.
+Compared with "vibe coding", the spec gave two concrete things: a definition of done per task and a contract (`MemoryStore`, `OuijaApi`) that allowed building the core without a UI and the UI without the core.
 
 ## Steering
 
@@ -60,7 +60,7 @@ What they found that example-based tests would not have:
 
 ## Verification with the real app
 
-Besides the 373 unit and property tests, `npm run e2e` (53 tests) launches the real Electron app against real Ollama (`bge-m3` and `qwen3.5:4b`) over `fixtures/chaos/`: it checks renderer isolation, network blocking, search inside a ZIP, WordPerfect rescue, repair of damaged text, the external-provider flow against a simulated server, the Gallows against a fake trash, the MCP server over stdio, *Bring to the present* and the six interface languages.
+Besides the 373 unit and property tests, `npm run e2e` (53 tests) launches the real Electron app against real local models (`bge-m3` and `qwen3.5:4b` through Ollama) over `fixtures/chaos/`: it checks renderer isolation, network blocking, search inside a ZIP, WordPerfect rescue, repair of damaged text, the external-provider flow against a simulated server, the Gallows against a fake trash, the MCP server over stdio, *Bring to the present* and the six interface languages.
 
 ## What I would do differently
 

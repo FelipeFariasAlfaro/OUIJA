@@ -34,7 +34,7 @@ describe.skipIf(!chatModel)('Pregunta y respuesta con modelos locales reales', (
   }
 
   beforeAll(async () => {
-    root = mkdtempSync(join(tmpdir(), 'medium-real-'))
+    root = mkdtempSync(join(tmpdir(), 'ouija-real-'))
     put('Personal/borrador_final3.txt', 'Poema para Rosa\n\nTus manos guardan la luz de marzo,\ny yo, torpe, aprendo a nombrarla.\nCatorce versos escritos para ti, Rosa.', t(2019, 3, 12))
     put('Antiguos/contrato_arriendo_2015.txt', 'Contrato de arriendo de departamento ubicado en calle Lira. Vigencia de doce meses, renovable. Arrendador: Luis Mendoza.', t(2015, 4, 2))
     put('Trabajo/contrato_servicios.txt', 'Contrato de prestación de servicios profesionales de consultoría entre las partes, con plazo hasta diciembre de 2024.', t(2024, 1, 15))

@@ -118,3 +118,7 @@
 
 - [x] 19. Release 0.2.0: README framed around the resurrection of desktop search; the release takes the version from `package.json` and only bumps the patch if that tag already exists
 - [x] 20. Updates: electron-updater with GitHub Releases (Windows NSIS and AppImage install on restart; .deb and dev open the release page), banner and Settings card, `autoUpdate` setting; the release workflow uploads `latest*.yml` and blockmaps
+- [x] 21. Any local model and the OUIJA name everywhere
+  - [x] 21.1 Answer model selector in Settings: Automatic, any Ollama chat model, or a model from an OpenAI-compatible local server (LM Studio, llama.cpp, Jan, vLLM), localhost only
+  - [x] 21.2 Data folder `ouija` with automatic rename of the old `medium` folder; internal names, IPC channels and environment variables renamed
+  - _Requirements: R18_

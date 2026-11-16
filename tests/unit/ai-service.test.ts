@@ -6,7 +6,7 @@ import type { AiSettings } from '@shared/ai'
 import { AiService } from '../../src/main/core/ai'
 import { SecretStore, type SecretCrypto } from '../../src/main/core/secrets'
 import { DEFAULT_SETTINGS, SettingsStore } from '../../src/main/core/settings'
-import { MediumCore, type ModelClient } from '../../src/main/core/medium'
+import { OuijaCore, type ModelClient } from '../../src/main/core/ouija'
 import { FAKE_DIM, FakeEmbedder } from '../helpers/fakeEmbedder'
 
 const KEY = 'sk-ant-api03-SECRETO-1234567890'
@@ -15,7 +15,7 @@ const crypto = (available: boolean): SecretCrypto => ({ available: () => availab
 
 let dir: string
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'medium-ai-'))
+  dir = mkdtempSync(join(tmpdir(), 'ouija-ai-'))
 })
 afterEach(() => rmSync(dir, { recursive: true, force: true }))
 
@@ -256,10 +256,10 @@ function localClient(chat = true): ModelClient & { prompts: string[]; embedder: 
   }
 }
 
-describe('MediumCore con un servicio externo', () => {
+describe('OuijaCore con un servicio externo', () => {
   let root: string
   beforeEach(() => {
-    root = mkdtempSync(join(tmpdir(), 'medium-ai-root-'))
+    root = mkdtempSync(join(tmpdir(), 'ouija-ai-root-'))
     mkdirSync(root, { recursive: true })
     writeFileSync(join(root, 'poema.txt'), 'Poema para Rosa. Tus manos guardan la luz de marzo, y yo aprendo a nombrarla despacio.')
   })
@@ -273,7 +273,7 @@ describe('MediumCore con un servicio externo', () => {
     if (opts.keyInMemory !== false) await secrets.set('ai:anthropic', KEY)
     if (opts.mode !== 'local') await settings.update({ ai: { mode: 'remote', provider: 'anthropic', model: 'claude-haiku-4-5', remoteDocuments: opts.remoteDocuments ?? false } })
     const local = opts.local ?? localClient()
-    const core = new MediumCore({ dataDir: dir, settings, secrets, createClient: () => local, aiDeps: { fetch: opts.remote.f } })
+    const core = new OuijaCore({ dataDir: dir, settings, secrets, createClient: () => local, aiDeps: { fetch: opts.remote.f } })
     await core.init()
     return { core, local }
   }

@@ -3,7 +3,7 @@ import type { AiSaveInput } from '@shared/ai'
 import { IPC, type AskFilters, type AppInfo, type ExportResult, type PresentResult, type Settings } from '@shared/ipc'
 import type { Lang } from '@shared/langs'
 import { ALL_KINDS, type FileKind } from '@shared/filetypes'
-import type { MediumCore } from './core/medium'
+import type { OuijaCore } from './core/ouija'
 import type { Updater } from './updater'
 import { suggestFolders } from './core/setup'
 import { AI_PROVIDER_IDS } from '@shared/ai'
@@ -34,7 +34,7 @@ function asFilters(raw: unknown): AskFilters | undefined {
 }
 
 export interface IpcContext {
-  core: MediumCore
+  core: OuijaCore
   palette: PaletteWindow
   appFileUrl: string
   devServerUrl?: string
@@ -136,6 +136,7 @@ export function registerIpc(ctx: IpcContext): void {
   })
 
   handle(IPC.fileKinds, () => core.fileKinds())
+  handle(IPC.localModels, () => core.localModels())
   handle(IPC.recentChanges, (_e, limit) => core.recentChanges(typeof limit === 'number' ? limit : 30))
   handle(IPC.trashList, () => core.trashOverview())
   handle(IPC.trashRestore, async (_e, ids, destination) => {

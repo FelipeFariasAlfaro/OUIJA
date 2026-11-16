@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { OllamaError } from '@core/ai/ollama'
 import type { IndexState } from '@shared/ipc'
-import { MediumCore, type ModelClient } from '../../src/main/core/medium'
+import { OuijaCore, type ModelClient } from '../../src/main/core/ouija'
 import { SecretStore } from '../../src/main/core/secrets'
 import { SettingsStore } from '../../src/main/core/settings'
 import { FAKE_DIM, FakeEmbedder } from '../helpers/fakeEmbedder'
@@ -41,7 +41,7 @@ function fakeClient(options: FakeOptions = {}): ModelClient & { embedder: FakeEm
 let root: string
 let data: string
 let settings: SettingsStore
-let core: MediumCore
+let core: OuijaCore
 let client: ReturnType<typeof fakeClient>
 
 const put = (rel: string, content: string | Buffer, when?: Date) => {
@@ -54,13 +54,13 @@ const put = (rel: string, content: string | Buffer, when?: Date) => {
 
 async function boot(options: FakeOptions = {}) {
   client = fakeClient(options)
-  core = new MediumCore({ dataDir: data, settings, secrets: new SecretStore(join(data, 'secrets.json'), { available: () => false, encrypt: (p) => Buffer.from(p), decrypt: (b) => b.toString() }), createClient: () => client })
+  core = new OuijaCore({ dataDir: data, settings, secrets: new SecretStore(join(data, 'secrets.json'), { available: () => false, encrypt: (p) => Buffer.from(p), decrypt: (b) => b.toString() }), createClient: () => client })
   await core.init()
 }
 
 beforeEach(async () => {
-  root = mkdtempSync(join(tmpdir(), 'medium-core-root-'))
-  data = mkdtempSync(join(tmpdir(), 'medium-core-data-'))
+  root = mkdtempSync(join(tmpdir(), 'ouija-core-root-'))
+  data = mkdtempSync(join(tmpdir(), 'ouija-core-data-'))
   settings = new SettingsStore(join(data, 'settings.json'))
   await settings.load()
   await settings.update({ folders: [root], watchFolders: false })
@@ -77,7 +77,7 @@ const fill = () => {
   put('respaldo.zip', buildZip([{ name: 'Poemas/rosa_v1.txt', data: 'Para Rosa, primer borrador del poema. Tus manos guardan la luz.' }]), new Date('2008-06-03'))
 }
 
-describe('MediumCore: arranque', () => {
+describe('OuijaCore: arranque', () => {
   it('adopta la dimensión real del modelo de embeddings y guarda el cambio', async () => {
     await boot({ dims: FAKE_DIM })
     expect(settings.value.embedDimensions).toBe(FAKE_DIM)
@@ -103,7 +103,7 @@ describe('MediumCore: arranque', () => {
   })
 })
 
-describe('MediumCore: indexar y preguntar', () => {
+describe('OuijaCore: indexar y preguntar', () => {
   it('indexa, informa el progreso y responde con archivos reales y de dentro de un ZIP', async () => {
     fill()
     await boot()
@@ -184,7 +184,7 @@ describe('MediumCore: indexar y preguntar', () => {
   })
 })
 
-describe('MediumCore: fantasmas, personas y resúmenes', () => {
+describe('OuijaCore: fantasmas, personas y resúmenes', () => {
   it('genera resúmenes, personas con línea de tiempo y fantasmas con necrológica', async () => {
     fill()
     await boot()
@@ -217,7 +217,7 @@ describe('MediumCore: fantasmas, personas y resúmenes', () => {
   })
 })
 
-describe('MediumCore: abrir y exportar solo lo indexado', () => {
+describe('OuijaCore: abrir y exportar solo lo indexado', () => {
   it('rechaza rutas que no están en el índice', async () => {
     fill()
     await boot()
@@ -272,7 +272,7 @@ describe('MediumCore: abrir y exportar solo lo indexado', () => {
   })
 })
 
-describe('MediumCore: todos los tipos de archivo', () => {
+describe('OuijaCore: todos los tipos de archivo', () => {
   it('conoce imágenes, audios y videos por su nombre y las muestra sin fragmento', async () => {
     put('Logos Hakas/Logo Haka Lens blanco (1).png', Buffer.from([0x89, 0x50, 0x4e, 0x47]))
     put('Descargas/ElevenLabs_Camila.mp3', Buffer.from('ID3'))
@@ -304,7 +304,7 @@ describe('MediumCore: todos los tipos de archivo', () => {
   })
 })
 
-describe('MediumCore: configuración y privacidad', () => {
+describe('OuijaCore: configuración y privacidad', () => {
   it('quitar una carpeta olvida lo que se indexó de ella, sin tocar los archivos', async () => {
     fill()
     await boot()

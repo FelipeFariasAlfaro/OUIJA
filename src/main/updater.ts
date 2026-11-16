@@ -11,7 +11,7 @@ const EVERY_MS = 6 * 3600_000
 
 /** Solo pruebas: una API local que imita a GitHub. Nunca se acepta un servidor remoto distinto. */
 function latestApi(): string {
-  const test = process.env['MEDIUM_UPDATE_TEST_API']
+  const test = process.env['OUIJA_UPDATE_TEST_API']
   if (test && /^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?\//.test(test)) return test
   return LATEST_API
 }
@@ -32,7 +32,7 @@ export class Updater {
   readonly canInstall: boolean
 
   constructor() {
-    this.canInstall = app.isPackaged && !process.env['MEDIUM_UPDATE_TEST_API'] && (process.platform === 'win32' || Boolean(process.env['APPIMAGE']))
+    this.canInstall = app.isPackaged && !process.env['OUIJA_UPDATE_TEST_API'] && (process.platform === 'win32' || Boolean(process.env['APPIMAGE']))
     this.state = { ...this.state, canInstall: this.canInstall }
   }
 

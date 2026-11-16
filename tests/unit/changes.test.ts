@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { IndexPipeline, watchFolder, type ChangeInput } from '@core/indexing'
 import { SqliteStore } from '@core/memory'
-import { MediumCore, type ModelClient } from '../../src/main/core/medium'
+import { OuijaCore, type ModelClient } from '../../src/main/core/ouija'
 import { SecretStore } from '../../src/main/core/secrets'
 import { SettingsStore } from '../../src/main/core/settings'
 import { FAKE_DIM, FakeEmbedder } from '../helpers/fakeEmbedder'
@@ -24,7 +24,7 @@ const put = (rel: string, data: string | Buffer, when?: Date) => {
 const log = () => store.recentChanges(100).map((c) => `${c.kind}:${c.name}`)
 
 beforeEach(() => {
-  root = mkdtempSync(join(tmpdir(), 'medium-changes-'))
+  root = mkdtempSync(join(tmpdir(), 'ouija-changes-'))
   store = new SqliteStore(':memory:', { dimensions: FAKE_DIM })
   pipeline = new IndexPipeline({ store, embedder: new FakeEmbedder(), changes: { record: (c: ChangeInput) => store.recordChange(c) } })
 })
@@ -179,10 +179,10 @@ function fakeClient(): ModelClient {
   }
 }
 
-describe('MediumCore: cambios y papelera', () => {
+describe('OuijaCore: cambios y papelera', () => {
   let data: string
   let home: string
-  let core: MediumCore
+  let core: OuijaCore
   const until = async (cond: () => boolean | Promise<boolean>, ms = 10_000) => {
     const end = Date.now() + ms
     while (Date.now() < end) {
@@ -196,7 +196,7 @@ describe('MediumCore: cambios y papelera', () => {
     const settings = new SettingsStore(join(data, 'settings.json'))
     await settings.load()
     await settings.update({ folders: [root], watchFolders: false, indexOnStart: false, ocrImages: false, onboarded: true })
-    core = new MediumCore({
+    core = new OuijaCore({
       dataDir: data,
       settings,
       secrets: new SecretStore(join(data, 's.json'), { available: () => false, encrypt: (p) => Buffer.from(p), decrypt: (b) => b.toString() }),
@@ -208,8 +208,8 @@ describe('MediumCore: cambios y papelera', () => {
   }
 
   beforeEach(() => {
-    data = mkdtempSync(join(tmpdir(), 'medium-core-data-'))
-    home = mkdtempSync(join(tmpdir(), 'medium-core-home-'))
+    data = mkdtempSync(join(tmpdir(), 'ouija-core-data-'))
+    home = mkdtempSync(join(tmpdir(), 'ouija-core-home-'))
     mkdirSync(join(home, '.local', 'share', 'Trash', 'files'), { recursive: true })
     mkdirSync(join(home, '.local', 'share', 'Trash', 'info'), { recursive: true })
   })

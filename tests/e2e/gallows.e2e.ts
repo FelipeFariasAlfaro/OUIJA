@@ -21,7 +21,7 @@ const trashFile = (name: string, content: string, original: string, date = '2026
 }
 
 beforeAll(async () => {
-  root = mkdtempSync(join(tmpdir(), 'medium-gallows-'))
+  root = mkdtempSync(join(tmpdir(), 'ouija-gallows-'))
   docs = join(root, 'docs')
   data = join(root, 'data')
   mkdirSync(docs, { recursive: true })
@@ -35,7 +35,7 @@ beforeAll(async () => {
   writeFileSync(join(data, 'settings.json'), JSON.stringify({ folders: [docs], onboarded: true, watchFolders: true, indexOnStart: true, ocrImages: false, lang: 'es' }))
   app = await electron.launch({
     args: [resolve('.'), '--no-sandbox'],
-    env: { ...process.env, HOME: root, XDG_DATA_HOME: join(root, 'share'), MEDIUM_USER_DATA: data, ELECTRON_RENDERER_URL: '' }
+    env: { ...process.env, HOME: root, XDG_DATA_HOME: join(root, 'share'), OUIJA_USER_DATA: data, ELECTRON_RENDERER_URL: '' }
   })
   page = await app.firstWindow()
   await page.waitForLoadState('domcontentloaded')
@@ -47,7 +47,7 @@ afterAll(async () => {
 
 describe('cambios en vivo', () => {
   it('un archivo nuevo aparece en "Últimos cambios"', async () => {
-    await expect.poll(() => page.evaluate(() => (window as never as { medium: { indexState(): Promise<{ indexed: number; phase: string }> } }).medium.indexState().then((s) => s.phase === 'idle' && s.indexed > 0)), { timeout: 60_000 }).toBe(true)
+    await expect.poll(() => page.evaluate(() => (window as never as { ouija: { indexState(): Promise<{ indexed: number; phase: string }> } }).ouija.indexState().then((s) => s.phase === 'idle' && s.indexed > 0)), { timeout: 60_000 }).toBe(true)
     writeFileSync(join(docs, 'contrato-arriendo.txt'), 'Contrato de arriendo del departamento, firmado en marzo.')
     await expect.poll(() => page.getByTestId('recent-changes').innerText().catch(() => ''), { timeout: 60_000 }).toContain('contrato-arriendo.txt')
     expect(await page.getByTestId('recent-changes').innerText()).toContain('Nuevo')
@@ -105,11 +105,11 @@ describe('Patíbulo y Resurrección', () => {
     expect(readFileSync(join(chosen, 'sinorigen.txt'), 'utf8')).toBe('sin origen')
   })
   it('la interfaz no puede mostrar rutas que no resucitó ella', async () => {
-    const r = await page.evaluate(() => (window as never as { medium: { trashReveal(p: string): Promise<void> } }).medium.trashReveal('/etc/passwd').then(() => 'ok', (e: Error) => e.message))
+    const r = await page.evaluate(() => (window as never as { ouija: { trashReveal(p: string): Promise<void> } }).ouija.trashReveal('/etc/passwd').then(() => 'ok', (e: Error) => e.message))
     expect(r).toMatch(/resucitados/)
   })
   it('rechaza ids inventados', async () => {
-    const r = await page.evaluate(() => (window as never as { medium: { trashRestore(i: string[], d: string): Promise<{ results: { ok: boolean; error?: string }[] }> } }).medium.trashRestore(['../../etc/passwd'], 'original'))
+    const r = await page.evaluate(() => (window as never as { ouija: { trashRestore(i: string[], d: string): Promise<{ results: { ok: boolean; error?: string }[] }> } }).ouija.trashRestore(['../../etc/passwd'], 'original'))
     expect(r.results[0]).toMatchObject({ ok: false, error: 'not-found' })
   })
 })

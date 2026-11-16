@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import type { AppInfo, IndexState, KindCount, OllamaStatus, Settings, UpdateState } from '@shared/ipc'
+import type { AppInfo, IndexState, KindCount, LocalModels, OllamaStatus, Settings, UpdateState } from '@shared/ipc'
 import { KIND_LABEL } from '@shared/filetypes'
 import type { Lang } from '@shared/types'
 import { LANG_IDS, LANG_INFO } from '@shared/langs'
@@ -24,6 +24,34 @@ export default function SettingsView({ settings, index, onSettings, onTour }: { 
   const [kinds, setKinds] = useState<KindCount[]>([])
   const [mcp, setMcp] = useState<string | null>(null)
   const [upd, setUpd] = useState<UpdateState | null>(null)
+  const [locals, setLocals] = useState<LocalModels | null>(null)
+  const loadLocals = () => void api.localModels().then(setLocals).catch(() => setLocals(null))
+  useEffect(loadLocals, [])
+  /** Elige el modelo local de respuestas: automático, uno de Ollama o uno de otro servidor local. */
+  const chooseLocal = (value: string) => {
+    const patch: Partial<Settings> =
+      value === 'auto'
+        ? { chatModel: '', localServer: null }
+        : value.startsWith('ollama:')
+          ? { chatModel: value.slice(7), localServer: null }
+          : (() => {
+              const [i, ...rest] = value.slice(4).split('|')
+              const srv = locals?.servers[Number(i)]
+              return srv ? { localServer: { baseUrl: srv.baseUrl, model: rest.join('|'), name: srv.name } } : {}
+            })()
+    void api
+      .setSettings(patch)
+      .then(onSettings)
+      .then(() => api.ollamaStatus().then(setOllama))
+  }
+  const localValue = settings.localServer
+    ? (() => {
+        const i = locals?.servers.findIndex((s) => s.baseUrl === settings.localServer?.baseUrl) ?? -1
+        return i >= 0 ? `srv:${i}|${settings.localServer.model}` : 'current-server'
+      })()
+    : settings.chatModel
+      ? `ollama:${settings.chatModel}`
+      : 'auto'
   useEffect(() => {
     void api.updateState().then(setUpd).catch(() => undefined)
     return api.onUpdateState(setUpd)
@@ -152,7 +180,7 @@ export default function SettingsView({ settings, index, onSettings, onTour }: { 
           <>
             {(() => {
               const remote = ai.mode === 'remote' && ai.provider && ai.model ? { name: AI_PROVIDERS[ai.provider].name, id: ai.provider, model: ai.model } : null
-              const localChat = ollama?.available ? ollama.chatModel : undefined
+              const localChat = ollama?.available && ollama.chatModel ? (ollama.chatServer ? `${ollama.chatServer} · ${ollama.chatModel}` : ollama.chatModel) : undefined
               const local = (model: string) => (
                 <>
                   <span className="rounded-full bg-emerald-400/10 px-1.5 py-px text-[10px] text-emerald-200">{t.aiWhereLocal}</span>
@@ -186,6 +214,52 @@ export default function SettingsView({ settings, index, onSettings, onTour }: { 
               )
             })()}
             {ai.mode === 'remote' && !ai.hasKey && <p className="mt-2 text-[12px] text-amber-200/90">{t.aiMissingKey}</p>}
+            {ai.mode === 'local' && (
+              <div className="mt-3" data-testid="local-model">
+                <div className="flex flex-wrap items-center gap-2">
+                  <label htmlFor="local-model" className="text-[13px] text-zinc-500">
+                    {t.aiLocalModel}
+                  </label>
+                  <select
+                    id="local-model"
+                    value={localValue}
+                    onChange={(e) => chooseLocal(e.target.value)}
+                    className="max-w-full rounded-md border border-white/10 bg-[#14141f] px-2 py-1 text-xs text-zinc-200"
+                  >
+                    <option value="auto">{t.aiLocalAuto}</option>
+                    {settings.localServer && localValue === 'current-server' && (
+                      <option value="current-server">
+                        {settings.localServer.name ?? settings.localServer.baseUrl} · {settings.localServer.model}
+                      </option>
+                    )}
+                    {settings.chatModel && !locals?.ollama.includes(settings.chatModel) && !settings.localServer && <option value={`ollama:${settings.chatModel}`}>Ollama · {settings.chatModel}</option>}
+                    {(locals?.ollama.length ?? 0) > 0 && (
+                      <optgroup label="Ollama">
+                        {locals!.ollama.map((m) => (
+                          <option key={m} value={`ollama:${m}`}>
+                            {m}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                    {locals?.servers.map((srv, i) => (
+                      <optgroup key={srv.baseUrl} label={`${srv.name} · ${srv.baseUrl.replace(/^https?:\/\//, '')}`}>
+                        {srv.models.map((m) => (
+                          <option key={m} value={`srv:${i}|${m}`}>
+                            {m}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                  <button type="button" onClick={loadLocals} className="text-[11px] text-violet-300 hover:text-violet-200">
+                    {t.aiLocalRescan}
+                  </button>
+                </div>
+                <p className="mt-1.5 text-[11px] leading-relaxed text-zinc-500">{t.aiLocalHelp}</p>
+                {locals && locals.ollama.length === 0 && locals.servers.length === 0 && <p className="mt-1 text-[11px] text-amber-200/90">{t.aiLocalNone}</p>}
+              </div>
+            )}
             <p className="mt-2.5 text-[11px] text-zinc-500">{ai.mode === 'remote' ? t.aiRemoteNote : t.aiLocalNote}</p>
             <div className="mt-2.5 flex flex-wrap items-center gap-2">
               <ActionButton onClick={() => setChangingAi(true)}>{t.aiChange}</ActionButton>

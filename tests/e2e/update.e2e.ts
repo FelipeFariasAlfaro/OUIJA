@@ -20,11 +20,11 @@ beforeAll(async () => {
     res.end(JSON.stringify({ tag_name: latest, html_url: `https://github.com/FelipeFariasAlfaro/OUIJA/releases/tag/${latest}` }))
   })
   await new Promise<void>((ok) => api.listen(0, '127.0.0.1', ok))
-  data = mkdtempSync(join(tmpdir(), 'medium-update-'))
+  data = mkdtempSync(join(tmpdir(), 'ouija-update-'))
   writeFileSync(join(data, 'settings.json'), JSON.stringify({ folders: [], onboarded: true, tourDone: true, watchFolders: false, indexOnStart: false, autoUpdate: false, lang: 'es' }))
   app = await electron.launch({
     args: [resolve('.'), '--no-sandbox'],
-    env: { ...process.env, MEDIUM_USER_DATA: data, MEDIUM_UPDATE_TEST_API: `http://127.0.0.1:${(api.address() as AddressInfo).port}/latest`, ELECTRON_RENDERER_URL: '' }
+    env: { ...process.env, OUIJA_USER_DATA: data, OUIJA_UPDATE_TEST_API: `http://127.0.0.1:${(api.address() as AddressInfo).port}/latest`, ELECTRON_RENDERER_URL: '' }
   })
   page = await app.firstWindow()
   await page.waitForLoadState('domcontentloaded')

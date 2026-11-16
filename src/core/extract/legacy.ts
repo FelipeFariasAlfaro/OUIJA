@@ -55,11 +55,11 @@ export function convertLegacy(ext: string, data: Buffer, target: 'txt' | 'csv' =
     const bin = await findSoffice()
     if (!bin) throw new ExtractError('LibreOffice no está instalado')
 
-    const dir = await mkdtemp(join(tmpdir(), 'medium-lo-'))
+    const dir = await mkdtemp(join(tmpdir(), 'ouija-lo-'))
     try {
       const input = join(dir, `in.${safeExt}`)
       await writeFile(input, data)
-      const profile = pathToFileURL(join(tmpdir(), 'medium-lo-profile')).href
+      const profile = pathToFileURL(join(tmpdir(), 'ouija-lo-profile')).href
       await execFileAsync(
         bin,
         [
@@ -96,11 +96,11 @@ export function convertLegacyToModern(ext: string, data: Buffer, target: 'docx' 
   return serialize(async () => {
     const bin = await findSoffice()
     if (!bin) throw new ExtractError('LibreOffice no está instalado')
-    const dir = await mkdtemp(join(tmpdir(), 'medium-lo-'))
+    const dir = await mkdtemp(join(tmpdir(), 'ouija-lo-'))
     try {
       const input = join(dir, `in.${safeExt}`)
       await writeFile(input, data)
-      const profile = pathToFileURL(join(tmpdir(), 'medium-lo-profile')).href
+      const profile = pathToFileURL(join(tmpdir(), 'ouija-lo-profile')).href
       await execFileAsync(bin, ['--headless', '--norestore', '--nolockcheck', `-env:UserInstallation=${profile}`, '--convert-to', target, '--outdir', dir, input], {
         timeout: CONVERT_TIMEOUT_MS
       })

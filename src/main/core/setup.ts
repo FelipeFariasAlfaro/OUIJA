@@ -187,6 +187,8 @@ export class SetupManager {
   private chatStep(models: string[] | null): SetupStep {
     const base = EMPTY('chat', SIZES.chat)
     if (this.deps.getSettings().ai.mode === 'remote') return { ...base, status: 'skipped', note: 'remote' }
+    // Las respuestas las da otro programa local (LM Studio, Jan…): no hace falta bajar un modelo a Ollama.
+    if (this.deps.getSettings().localServer) return { ...base, status: 'skipped', note: 'local-server' }
     const wanted = this.deps.getSettings().chatModel || CHAT_MODEL
     if (models && (this.hasModel(models, wanted) || models.some((m) => !/embed|bge|nomic|minilm|e5|rerank/i.test(m)))) {
       return { ...base, status: 'done', note: wanted }
@@ -253,7 +255,7 @@ export class SetupManager {
     if (runtimeOk) {
       const embedOk = await guard('embed', () => this.pull(settings.embedModel, 'embed', signal))
       if (embedOk) await this.deps.onModelsChanged?.()
-      if (embedOk) {
+      if (embedOk && !settings.localServer) {
         await guard('chat', () => this.pull(settings.chatModel || CHAT_MODEL, 'chat', signal))
         await this.deps.onModelsChanged?.()
       }

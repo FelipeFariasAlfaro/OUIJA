@@ -7,7 +7,7 @@ import { SqliteStore } from '@core/memory'
 import { FAKE_DIM, FakeEmbedder } from '../helpers/fakeEmbedder'
 import { buildZip } from '../helpers/zipBuilder'
 
-const root = mkdtempSync(join(tmpdir(), 'medium-atime-'))
+const root = mkdtempSync(join(tmpdir(), 'ouija-atime-'))
 afterAll(() => rmSync(root, { recursive: true, force: true }))
 
 describe('indexar no altera la fecha de último acceso', () => {

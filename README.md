@@ -37,17 +37,19 @@ And it resurrects files in three more ways:
 
 ## Privacy
 
-The index lives on your computer and no document leaves it. Network calls go only to Ollama on `localhost` and, only if you choose it, to the language-model provider you configure. Search by meaning is always local; an external provider receives only your question and short snippets of the candidate files. API keys are encrypted with the system keystore and never reach the UI.
+The index lives on your computer and no document leaves it. Network calls go only to local model servers on `localhost` (Ollama, or LM Studio and similar if you choose one), to GitHub to check for new versions (can be turned off) and, only if you choose it, to the language-model provider you configure. Search by meaning is always local; an external provider receives only your question and short snippets of the candidate files. API keys are encrypted with the system keystore and never reach the UI.
 
 ## Local AI first, external AI if you want
 
-OUIJA is designed to run with **local AI**: `bge-m3` for search by meaning and `qwen3.5:4b` for answers, both through Ollama, at no cost per question and with nothing leaving your computer. If your machine is short on memory, or you want better written answers, you can switch the **answer model** to Claude, OpenAI, Gemini or DeepSeek with your own API key (Settings → Artificial intelligence). Search by meaning stays local in every case.
+OUIJA is designed to run with **local AI**, at no cost per question and with nothing leaving your computer. Answers can come from **any local model**: any chat model installed in Ollama, or one served on this computer by LM Studio, llama.cpp, Jan or vLLM (any server with an OpenAI-compatible API on `localhost`). Pick it in **Settings → Artificial intelligence → Answer model**, or leave it on *Automatic* to use the best one installed. Onboarding installs `qwen3.5:4b` if you have none. Search by meaning uses an Ollama embedding model (`bge-m3` by default).
+
+If your machine is short on memory, or you want better written answers, you can switch the **answer model** to Claude, OpenAI, Gemini or DeepSeek with your own API key. Search by meaning stays local in every case.
 
 **What a question costs.** Each question makes two small calls: one to understand it and one to write the answer from at most 8 candidate files. That is roughly **1,900 input tokens and 220 output tokens per question**. Recognizing people and summarizing documents with an external service is off by default; if you enable it, each document costs roughly **2,600 input and 250 output tokens**, once.
 
 | Provider · model | Price per 1M tokens (input / output) | ≈ 1,000 questions | ≈ 1,000 documents (opt-in) |
 |---|---|---|---|
-| **Local** (Ollama · `qwen3.5:4b`) | free | **$0** | **$0** |
+| **Any local model** (Ollama, LM Studio, llama.cpp, Jan, vLLM…) | free | **$0** | **$0** |
 | Claude Haiku 5.5 | $0.10 / $0.50 | $0.30 | $0.39 |
 | Claude Sonnet 5.5 | $2 / $10 | $6.00 | $7.70 |
 | Claude Opus 5.5 | $4 / $20 | $12.00 | $15.40 |
@@ -71,7 +73,7 @@ OUIJA ships a read-only [Model Context Protocol](https://modelcontextprotocol.io
 ```json
 {
   "mcpServers": {
-    "ouija": { "command": "/path/to/OUIJA-0.3.0.AppImage", "args": ["--mcp"] }
+    "ouija": { "command": "/path/to/OUIJA-0.4.0.AppImage", "args": ["--mcp"] }
   }
 }
 ```
@@ -95,7 +97,7 @@ Download the latest build from the [Releases](https://github.com/FelipeFariasAlf
 
 OUIJA checks GitHub Releases when it opens and every 6 hours (can be turned off in Settings). On Windows and with the AppImage it downloads the new version, verifies it and installs it on restart; with the `.deb` it opens the download page.
 
-On first launch you pick a language, see how it works, choose a local or external language model, and the app sets itself up: it uses the Ollama you already have or downloads its own (verified with SHA-256, no administrator rights) and pulls `bge-m3` (meaning) and `qwen3.5:4b` (answers). That is about 6 GB, once, and the only thing that uses the internet. Optional add-ons read more formats: LibreOffice (old formats and *Bring to the present* as DOCX), Tesseract and Poppler (OCR), 7-Zip (RAR, 7z, ARJ, LZH).
+On first launch you pick a language, see how it works, choose a local or external language model, and the app sets itself up: it uses the Ollama you already have or downloads its own (verified with SHA-256, no administrator rights) and pulls `bge-m3` (meaning) and, if you have no chat model yet, `qwen3.5:4b` (answers). That is about 6 GB, once, and the only thing that uses the internet. Optional add-ons read more formats: LibreOffice (old formats and *Bring to the present* as DOCX), Tesseract and Poppler (OCR), 7-Zip (RAR, 7z, ARJ, LZH).
 
 `–` minimizes to the taskbar, `×` quits, and `Ctrl/Cmd + Shift + Space` brings it back. On GNOME the tray icon needs the AppIndicator extension; on Wayland the global shortcut depends on the desktop portal.
 
@@ -105,7 +107,7 @@ On first launch you pick a language, see how it works, choose a local or externa
 
 ## Stack
 
-Electron, React, TypeScript, Tailwind, SQLite (FTS5 + `sqlite-vec`), Ollama, LibreOffice, Tesseract. Optional GLIA adapter behind the `MemoryStore` interface.
+Electron, React, TypeScript, Tailwind, SQLite (FTS5 + `sqlite-vec`), Ollama or any OpenAI-compatible local server, LibreOffice, Tesseract. Optional GLIA adapter behind the `MemoryStore` interface.
 
 ## Development
 

@@ -1,5 +1,5 @@
 import { createInterface } from 'node:readline'
-import type { MediumCore } from '../core/medium'
+import type { OuijaCore } from '../core/ouija'
 
 /**
  * Servidor MCP (Model Context Protocol) de OUIJA sobre stdio: JSON-RPC 2.0, un mensaje por línea.
@@ -39,7 +39,7 @@ const iso = (ms: number | undefined): string | undefined => (ms ? new Date(ms).t
 const fold = (s: string): string => s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
 
 /** Las herramientas que OUIJA ofrece a los agentes. */
-export function ouijaTools(core: MediumCore): McpTool[] {
+export function ouijaTools(core: OuijaCore): McpTool[] {
   return [
     {
       name: 'ask_ouija',

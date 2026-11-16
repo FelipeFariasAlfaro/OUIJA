@@ -6,7 +6,7 @@ import { afterAll, describe, expect, it } from 'vitest'
 import { find7z, openContainer } from '@core/media'
 import { parse7zListing } from '../../src/core/media/sevenZip'
 
-const tmp = mkdtempSync(join(tmpdir(), 'medium-7z-'))
+const tmp = mkdtempSync(join(tmpdir(), 'ouija-7z-'))
 afterAll(() => rmSync(tmp, { recursive: true, force: true }))
 
 describe('7-Zip', () => {

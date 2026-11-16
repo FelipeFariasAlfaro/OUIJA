@@ -7,7 +7,7 @@ import { DEFAULT_SETTINGS, sanitizeSettings, SettingsStore } from '../../src/mai
 import { asOneOf, asString, isAllowedRequest, isTrustedSender } from '../../src/main/security'
 import { registerShortcut } from '../../src/main/shortcut'
 
-const tmp = mkdtempSync(join(tmpdir(), 'medium-main-'))
+const tmp = mkdtempSync(join(tmpdir(), 'ouija-main-'))
 afterAll(() => rmSync(tmp, { recursive: true, force: true }))
 
 describe('P5: la interfaz solo puede hablar con el equipo local', () => {
@@ -36,7 +36,7 @@ describe('P5: la interfaz solo puede hablar con el equipo local', () => {
 })
 
 describe('IPC', () => {
-  const appFile = 'file:///opt/medium/out/renderer/index.html'
+  const appFile = 'file:///opt/ouija/out/renderer/index.html'
 
   it('solo confía en la página de la aplicación o el servidor de desarrollo declarado', () => {
     expect(isTrustedSender(appFile, appFile)).toBe(true)

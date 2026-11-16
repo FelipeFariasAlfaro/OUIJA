@@ -26,7 +26,7 @@ const pipeline = () => new IndexPipeline({ store, embedder })
 const rel = (p: string) => p.slice(root.length + 1)
 
 beforeEach(() => {
-  root = mkdtempSync(join(tmpdir(), 'medium-types-'))
+  root = mkdtempSync(join(tmpdir(), 'ouija-types-'))
   store = new SqliteStore(':memory:', { dimensions: FAKE_DIM })
   embedder = new FakeEmbedder()
 })
@@ -153,7 +153,7 @@ describe('contenido según el tipo', () => {
 const hasOcr = spawnSync('tesseract', ['--version']).error === undefined && spawnSync('pdftoppm', ['-v']).error === undefined
 describe.skipIf(!hasOcr)('texto dentro de imágenes (OCR)', () => {
   function pngWithText(text: string): Buffer {
-    const dir = mkdtempSync(join(tmpdir(), 'medium-png-'))
+    const dir = mkdtempSync(join(tmpdir(), 'ouija-png-'))
     try {
       writeFileSync(join(dir, 'a.pdf'), buildPdf([text, text], { fontSize: 28, width: 900, height: 160 }))
       execFileSync('pdftoppm', ['-r', '120', '-png', '-singlefile', join(dir, 'a.pdf'), join(dir, 'img')])

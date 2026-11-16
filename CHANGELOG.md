@@ -2,6 +2,15 @@
 
 All notable changes to OUIJA. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.4.0] - 2026-11-16
+
+### Added
+- **Any local model.** Settings lists the chat models installed in Ollama and the ones served by LM Studio, llama.cpp, Jan or vLLM on this computer; choose one or leave *Automatic*.
+
+### Changed
+- The app data folder is now `ouija` (for example `~/.config/ouija` or `%APPDATA%\ouija`). An existing `medium` folder is renamed automatically on first launch, keeping the index, settings and models.
+- Internal names, IPC channels and environment variables no longer use the old name.
+
 ## [0.3.0] - 2026-11-16
 
 ### Added
@@ -42,6 +51,7 @@ All notable changes to OUIJA. The format follows [Keep a Changelog](https://keep
 - Onboarding with automatic setup of Ollama and the models.
 - Linux (AppImage, deb) and Windows (NSIS) installers built on every push to `main`.
 
+[0.4.0]: https://github.com/FelipeFariasAlfaro/OUIJA/releases/tag/v0.4.0
 [0.3.0]: https://github.com/FelipeFariasAlfaro/OUIJA/releases/tag/v0.3.0
 [0.2.0]: https://github.com/FelipeFariasAlfaro/OUIJA/releases/tag/v0.2.0
 [0.1.0]: https://github.com/FelipeFariasAlfaro/OUIJA/releases/tag/v0.1.0

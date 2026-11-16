@@ -6,7 +6,7 @@ import { afterAll, describe, expect, it } from 'vitest'
 import { bufferSource, openContainer, readZip } from '@core/media'
 import { buildZip } from '../helpers/zipBuilder'
 
-const tmp = mkdtempSync(join(tmpdir(), 'medium-zip-'))
+const tmp = mkdtempSync(join(tmpdir(), 'ouija-zip-'))
 afterAll(() => rmSync(tmp, { recursive: true, force: true }))
 
 const read = async (buf: Buffer) => readZip(bufferSource(buf))

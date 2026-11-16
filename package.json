@@ -1,6 +1,6 @@
 {
-  "name": "medium",
-  "version": "0.3.0",
+  "name": "ouija",
+  "version": "0.4.0",
   "description": "OUIJA: arqueología digital personal. Resucita archivos, busca por significado y encuentra fantasmas digitales. Todo local.",
   "license": "MIT",
   "private": true,
@@ -49,5 +49,5 @@
     "email": "contacto@hakalab.com"
   },
   "homepage": "https://hakalab.com",
-  "desktopName": "medium.desktop"
+  "desktopName": "ouija.desktop"
 }

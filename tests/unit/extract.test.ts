@@ -11,7 +11,7 @@ import { findTesseract } from '../../src/core/extract/ocr'
 import { buildPdf } from '../helpers/pdfBuilder'
 import { buildZip } from '../helpers/zipBuilder'
 
-const tmp = mkdtempSync(join(tmpdir(), 'medium-extract-'))
+const tmp = mkdtempSync(join(tmpdir(), 'ouija-extract-'))
 afterAll(() => rmSync(tmp, { recursive: true, force: true }))
 
 const run = (name: string, data: Buffer | string) =>

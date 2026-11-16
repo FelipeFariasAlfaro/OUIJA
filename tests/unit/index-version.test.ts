@@ -6,7 +6,7 @@ import { afterAll, describe, expect, it } from 'vitest'
 import { INDEX_VERSION, SqliteStore } from '@core/memory'
 import { FAKE_DIM, FakeEmbedder } from '../helpers/fakeEmbedder'
 
-const dir = mkdtempSync(join(tmpdir(), 'medium-version-'))
+const dir = mkdtempSync(join(tmpdir(), 'ouija-version-'))
 afterAll(() => rmSync(dir, { recursive: true, force: true }))
 
 describe('versión del índice', () => {

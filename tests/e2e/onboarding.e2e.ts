@@ -13,14 +13,14 @@ let data: string
 let home: string
 
 const call = <T>(fn: string, ...args: unknown[]): Promise<T> =>
-  page.evaluate(([name, a]) => (window as unknown as { medium: Record<string, (...x: unknown[]) => unknown> }).medium[name as string](...(a as unknown[])) as unknown, [fn, args]) as Promise<T>
+  page.evaluate(([name, a]) => (window as unknown as { ouija: Record<string, (...x: unknown[]) => unknown> }).ouija[name as string](...(a as unknown[])) as unknown, [fn, args]) as Promise<T>
 
 beforeAll(async () => {
-  data = mkdtempSync(join(tmpdir(), 'medium-ob-data-'))
-  home = mkdtempSync(join(tmpdir(), 'medium-ob-home-'))
+  data = mkdtempSync(join(tmpdir(), 'ouija-ob-data-'))
+  home = mkdtempSync(join(tmpdir(), 'ouija-ob-home-'))
   mkdirSync(join(home, 'Documentos'))
   writeFileSync(join(home, 'Documentos', 'carta.txt'), 'Una carta de prueba con suficiente texto para indexar en la bienvenida.')
-  app = await electron.launch({ args: [resolve('.'), '--no-sandbox'], env: { ...process.env, MEDIUM_USER_DATA: data, HOME: home, ELECTRON_RENDERER_URL: '' } })
+  app = await electron.launch({ args: [resolve('.'), '--no-sandbox'], env: { ...process.env, OUIJA_USER_DATA: data, HOME: home, ELECTRON_RENDERER_URL: '' } })
   page = await app.firstWindow()
   await page.waitForLoadState('domcontentloaded')
 })
@@ -118,7 +118,7 @@ describe('bienvenida', () => {
   })
   it('la próxima vez no vuelve a aparecer', async () => {
     await app.close()
-    app = await electron.launch({ args: [resolve('.'), '--no-sandbox'], env: { ...process.env, MEDIUM_USER_DATA: data, HOME: home, ELECTRON_RENDERER_URL: '' } })
+    app = await electron.launch({ args: [resolve('.'), '--no-sandbox'], env: { ...process.env, OUIJA_USER_DATA: data, HOME: home, ELECTRON_RENDERER_URL: '' } })
     page = await app.firstWindow()
     await page.getByPlaceholder(/Pregunta por un archivo/).waitFor({ timeout: 30_000 })
     expect(await page.getByRole('heading', { name: /Bienvenido/ }).count()).toBe(0)

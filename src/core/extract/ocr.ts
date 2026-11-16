@@ -66,7 +66,7 @@ export async function ocrPdf(pdf: Buffer): Promise<OcrOutput> {
     throw new ExtractError('El PDF no tiene texto y falta `pdftoppm` (Poppler) para aplicar OCR')
   }
 
-  const dir = await mkdtemp(join(tmpdir(), 'medium-ocr-'))
+  const dir = await mkdtemp(join(tmpdir(), 'ouija-ocr-'))
   try {
     await writeFile(join(dir, 'in.pdf'), pdf)
     await execFileAsync('pdftoppm', ['-r', '200', '-l', String(MAX_PDF_PAGES), '-png', join(dir, 'in.pdf'), join(dir, 'page')], {
@@ -99,7 +99,7 @@ export async function ocrImage(data: Buffer, ext: string): Promise<OcrOutput> {
   const tess = await findTesseract()
   if (!tess || !canOcr(ext)) return { text: '', warnings: [] }
 
-  const dir = await mkdtemp(join(tmpdir(), 'medium-ocr-'))
+  const dir = await mkdtemp(join(tmpdir(), 'ouija-ocr-'))
   try {
     const file = join(dir, `in.${ext}`)
     await writeFile(file, data)

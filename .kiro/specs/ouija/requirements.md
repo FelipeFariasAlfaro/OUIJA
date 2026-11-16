@@ -136,6 +136,10 @@ OUIJA is a desktop app (Windows and Linux) for personal digital archaeology. It 
 1. WHEN a result was resurrected, THE user SHALL be able to save a copy in a current format: DOCX or XLSX through LibreOffice, or UTF-8 Markdown with the recovered text.
 2. THE system SHALL NOT overwrite existing files nor modify the original.
 
+### R18. Any local model
+1. THE answer model SHALL be any chat model installed in Ollama or served on this computer by an OpenAI-compatible server, chosen in Settings, or the best installed one when set to Automatic.
+2. THE system SHALL accept local model servers only on localhost.
+
 ## Verifiable properties (PBT)
 
 - P1: every path cited in an answer exists in the index.

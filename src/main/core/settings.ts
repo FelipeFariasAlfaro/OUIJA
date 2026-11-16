@@ -5,7 +5,8 @@ import { assertLocalHost, DEFAULT_EMBED_MODEL, DEFAULT_OLLAMA_HOST } from '@core
 import { DEFAULT_AI, isAiProvider, type AiSettings } from '@shared/ai'
 import { ALL_KINDS, type FileKind } from '@shared/filetypes'
 import { isLang } from '@shared/langs'
-import type { Settings } from '@shared/ipc'
+import type { LocalServerChoice, Settings } from '@shared/ipc'
+import { localServerBase } from '@core/ai/localServer'
 
 export const DEFAULT_SETTINGS: Settings = {
   folders: [],
@@ -17,6 +18,7 @@ export const DEFAULT_SETTINGS: Settings = {
   ollamaHost: DEFAULT_OLLAMA_HOST,
   embedModel: DEFAULT_EMBED_MODEL,
   chatModel: '',
+  localServer: null,
   embedDimensions: 1024,
   indexOnStart: true,
   watchFolders: true,
@@ -37,6 +39,20 @@ const int = (v: unknown, fallback: number, min: number, max: number): number =>
 function strings(v: unknown, fallback: string[], max = 500): string[] {
   if (!Array.isArray(v)) return fallback
   return [...new Set(v.filter((x): x is string => typeof x === 'string' && x.trim().length > 0 && x.length <= 4096).map((x) => x.trim()))].slice(0, max)
+}
+
+/** Solo servidores en este equipo; cualquier otra cosa vuelve a Ollama. */
+function sanitizeLocalServer(raw: unknown): LocalServerChoice | null {
+  if (typeof raw !== 'object' || raw === null) return null
+  const o = raw as Record<string, unknown>
+  if (typeof o.baseUrl !== 'string' || typeof o.model !== 'string' || !o.model.trim() || o.model.length > 200) return null
+  try {
+    const baseUrl = localServerBase(o.baseUrl)
+    const name = typeof o.name === 'string' && o.name.length <= 60 ? o.name : undefined
+    return { baseUrl, model: o.model.trim(), ...(name ? { name } : {}) }
+  } catch {
+    return null
+  }
 }
 
 function sanitizeAi(raw: unknown, base: AiSettings): AiSettings {
@@ -75,6 +91,7 @@ export function sanitizeSettings(raw: unknown, base: Settings = DEFAULT_SETTINGS
     ollamaHost,
     embedModel: str(o.embedModel, base.embedModel, 100),
     chatModel: typeof o.chatModel === 'string' && o.chatModel.length <= 100 ? o.chatModel.trim() : base.chatModel,
+    localServer: o.localServer === undefined ? base.localServer : sanitizeLocalServer(o.localServer),
     embedDimensions: int(o.embedDimensions, base.embedDimensions, 8, 8192),
     indexOnStart: bool(o.indexOnStart, base.indexOnStart),
     watchFolders: bool(o.watchFolders, base.watchFolders),
@@ -95,7 +112,7 @@ export class SettingsStore {
   constructor(private readonly file: string) {}
 
   get value(): Settings {
-    return { ...this.current, folders: [...this.current.folders], excludeDirs: [...this.current.excludeDirs], excludedKinds: [...this.current.excludedKinds], ai: { ...this.current.ai } }
+    return { ...this.current, folders: [...this.current.folders], excludeDirs: [...this.current.excludeDirs], excludedKinds: [...this.current.excludedKinds], localServer: this.current.localServer ? { ...this.current.localServer } : null, ai: { ...this.current.ai } }
   }
 
   async load(): Promise<Settings> {

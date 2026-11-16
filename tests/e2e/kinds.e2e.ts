@@ -12,18 +12,18 @@ let app: ElectronApplication
 let page: Page
 let root: string
 const call = <T>(fn: string, ...args: unknown[]): Promise<T> =>
-  page.evaluate(([name, a]) => (window as unknown as { medium: Record<string, (...x: unknown[]) => unknown> }).medium[name as string](...(a as unknown[])) as unknown, [fn, args]) as Promise<T>
+  page.evaluate(([name, a]) => (window as unknown as { ouija: Record<string, (...x: unknown[]) => unknown> }).ouija[name as string](...(a as unknown[])) as unknown, [fn, args]) as Promise<T>
 const names = async (q: string) => (await call<SearchAnswer>('ask', q)).matches.map((m) => m.name).sort()
 
 beforeAll(async () => {
-  root = mkdtempSync(join(tmpdir(), 'medium-kinds-'))
+  root = mkdtempSync(join(tmpdir(), 'ouija-kinds-'))
   const docs = join(root, 'docs')
   mkdirSync(docs, { recursive: true })
   writeFileSync(join(docs, 'contrato-arriendo.txt'), 'Contrato de arriendo del departamento, firmado en marzo.')
   writeFileSync(join(docs, 'gastos-comunes.csv'), 'concepto,monto\ngastos comunes,45000\nluz,12000\nagua,8000\n')
   mkdirSync(join(root, 'data'))
   writeFileSync(join(root, 'data', 'settings.json'), JSON.stringify({ folders: [docs], onboarded: true, watchFolders: false, indexOnStart: true, ocrImages: false, lang: 'es' }))
-  app = await electron.launch({ args: [resolve('.'), '--no-sandbox'], env: { ...process.env, HOME: root, MEDIUM_USER_DATA: join(root, 'data'), ELECTRON_RENDERER_URL: '' } })
+  app = await electron.launch({ args: [resolve('.'), '--no-sandbox'], env: { ...process.env, HOME: root, OUIJA_USER_DATA: join(root, 'data'), ELECTRON_RENDERER_URL: '' } })
   page = await app.firstWindow()
   await page.waitForLoadState('domcontentloaded')
   for (let i = 0; i < 180; i++) {

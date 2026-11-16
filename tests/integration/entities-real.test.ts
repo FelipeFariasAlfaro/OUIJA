@@ -34,7 +34,7 @@ describe.skipIf(!chatModel)('Entidades con modelos locales reales', () => {
   const t = (y: number, m: number, d: number) => new Date(Date.UTC(y, m - 1, d, 12))
 
   beforeAll(async () => {
-    root = mkdtempSync(join(tmpdir(), 'medium-ents-'))
+    root = mkdtempSync(join(tmpdir(), 'ouija-ents-'))
     put(
       'tesis.txt',
       'Agradecimientos. A Rosa Campos, por leer cada capítulo dos veces, y al doctor Salinas, de la Universidad de Valparaíso, por guiar este trabajo. ' +

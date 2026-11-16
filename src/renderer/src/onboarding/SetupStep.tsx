@@ -41,7 +41,7 @@ function Row({ step }: { step: Step }) {
   let text = ''
   if (step.status === 'done') text = t.stepDone
   else if (step.status === 'pending') text = `${t.stepWaiting} · ${gb(step.sizeBytes)}`
-  else if (step.status === 'skipped') text = step.note === 'remote' ? t.stepSkippedRemote : t.stepSkippedMemory
+  else if (step.status === 'skipped') text = step.note === 'remote' ? t.stepSkippedRemote : step.note === 'local-server' ? t.stepSkippedServer : t.stepSkippedMemory
   else if (step.status === 'running') text = step.detail ? `${t[DETAILS[step.detail]] as string}${showBar ? ` ${pct}%` : ''}` : ''
   else if (step.status === 'error') text = step.errorMessage === 'cancelled' ? t.cancelled : (t[ERRORS[step.error ?? ''] ?? 'errGeneric'] as string)
 

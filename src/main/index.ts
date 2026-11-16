@@ -4,10 +4,11 @@ import { pathToFileURL } from 'node:url'
 import { IPC, type AppInfo } from '@shared/ipc'
 import iconPath from '../../resources/icon.png?asset'
 import trayPath from '../../resources/tray.png?asset'
-import { MediumCore } from './core/medium'
+import { OuijaCore } from './core/ouija'
 import { SecretStore } from './core/secrets'
 import { SettingsStore } from './core/settings'
 import { registerIpc } from './ipc'
+import { existingDataDir, prepareDataDir, resolveDataDir } from './dataDir'
 import { Updater } from './updater'
 import { runMcp } from './mcp/run'
 import { registerShortcut, type ShortcutResult } from './shortcut'
@@ -18,7 +19,10 @@ import { hardenSession, PaletteWindow, rendererFileFor } from './window'
 if (process.platform === 'linux' && process.env['XDG_SESSION_TYPE'] === 'wayland') {
   app.commandLine.appendSwitch('enable-features', 'GlobalShortcutsPortal')
 }
-if (process.env['MEDIUM_USER_DATA']) app.setPath('userData', process.env['MEDIUM_USER_DATA']) // pruebas
+// Carpeta de datos: `~/.config/ouija` (o `%APPDATA%\\ouija`). La antigua `medium` se renombra la primera vez.
+if (process.env['OUIJA_USER_DATA']) app.setPath('userData', process.env['OUIJA_USER_DATA']) // pruebas
+else if (!process.argv.includes('--mcp')) app.setPath('userData', prepareDataDir(app.getPath('appData')))
+else app.setPath('userData', existingDataDir(app.getPath('appData')))
 
 
 // `ouija --mcp`: servidor MCP por stdio para agentes (Kiro, Claude Desktop…), sin ventana. Convive con la
@@ -26,7 +30,7 @@ if (process.env['MEDIUM_USER_DATA']) app.setPath('userData', process.env['MEDIUM
 const MCP_MODE = process.argv.includes('--mcp')
 if (MCP_MODE) {
   app.disableHardwareAcceleration()
-  runMcp(process.env['OUIJA_DATA_DIR'] || app.getPath('userData'), app.getVersion(), (code) => app.exit(code)).catch((error: unknown) => {
+  runMcp(process.env['OUIJA_DATA_DIR'] ? resolveDataDir(process.env['OUIJA_DATA_DIR']) : app.getPath('userData'), app.getVersion(), (code) => app.exit(code)).catch((error: unknown) => {
     console.error('OUIJA MCP:', error instanceof Error ? error.message : error)
     app.exit(1)
   })
@@ -69,8 +73,20 @@ app.whenReady().then(async () => {
     decrypt: (data) => safeStorage.decryptString(data)
   })
   await secrets.load()
-  const testBase = process.env['MEDIUM_AI_TEST_BASE'] // pruebas: un servidor local que imita al proveedor
-  const core = new MediumCore({ dataDir: app.getPath('userData'), settings, secrets, aiDeps: testBase ? { baseUrl: testBase } : undefined })
+  const testBase = process.env['OUIJA_AI_TEST_BASE'] // pruebas: un servidor local que imita al proveedor
+  // Pruebas: servidores locales falsos ("Nombre:puerto,…") en vez de los puertos habituales.
+  const testServers = process.env['OUIJA_TEST_LOCAL_SERVERS']
+    ?.split(',')
+    .map((s) => s.split(':'))
+    .map(([name, port]) => ({ name, port: Number(port) }))
+    .filter((s) => s.name && Number.isInteger(s.port))
+  const core = new OuijaCore({
+    dataDir: app.getPath('userData'),
+    settings,
+    secrets,
+    aiDeps: testBase ? { baseUrl: testBase } : undefined,
+    localServers: testServers ? { servers: testServers } : undefined
+  })
   await core.init()
 
   const devServerUrl = process.env['ELECTRON_RENDERER_URL']

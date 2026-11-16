@@ -1,16 +1,22 @@
 import { homedir } from 'node:os'
 import { join } from 'node:path'
-import { MediumCore } from '../core/medium'
+import { existingDataDir, resolveDataDir } from '../dataDir'
+import { OuijaCore } from '../core/ouija'
 import { SecretStore } from '../core/secrets'
 import { SettingsStore } from '../core/settings'
 import { ouijaTools, serveStdio } from './server'
 
 /** Carpeta de datos de la aplicación cuando el servidor corre fuera de Electron (como Node). */
 export function defaultDataDir(): string {
-  if (process.env['OUIJA_DATA_DIR']) return process.env['OUIJA_DATA_DIR']
-  if (process.platform === 'win32') return join(process.env['APPDATA'] ?? join(homedir(), 'AppData', 'Roaming'), 'medium')
-  if (process.platform === 'darwin') return join(homedir(), 'Library', 'Application Support', 'medium')
-  return join(process.env['XDG_CONFIG_HOME'] || join(homedir(), '.config'), 'medium')
+  if (process.env['OUIJA_DATA_DIR']) return resolveDataDir(process.env['OUIJA_DATA_DIR'])
+  const appData =
+    process.platform === 'win32'
+      ? (process.env['APPDATA'] ?? join(homedir(), 'AppData', 'Roaming'))
+      : process.platform === 'darwin'
+        ? join(homedir(), 'Library', 'Application Support')
+        : process.env['XDG_CONFIG_HOME'] || join(homedir(), '.config')
+  // El servidor solo lee: no renombra la carpeta antigua, pero la usa si es la única que hay.
+  return existingDataDir(appData)
 }
 
 /**
@@ -25,7 +31,7 @@ export async function runMcp(dataDir: string, version: string, exit: (code: numb
     encrypt: () => Buffer.alloc(0),
     decrypt: () => ''
   })
-  const core = new MediumCore({ dataDir, settings, secrets, passive: true })
+  const core = new OuijaCore({ dataDir, settings, secrets, passive: true })
   await core.init()
   serveStdio(ouijaTools(core), version, () => {
     void core.close().finally(() => exit(0))

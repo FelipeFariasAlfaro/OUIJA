@@ -18,19 +18,19 @@ let data: string
 let docs: string
 
 beforeAll(async () => {
-  data = mkdtempSync(join(tmpdir(), 'medium-e2e-data-'))
-  docs = mkdtempSync(join(tmpdir(), 'medium-e2e-docs-'))
+  data = mkdtempSync(join(tmpdir(), 'ouija-e2e-data-'))
+  docs = mkdtempSync(join(tmpdir(), 'ouija-e2e-docs-'))
   writeFileSync(join(docs, 'poema.txt'), 'Poema para Rosa. Tus manos guardan la luz de marzo, y yo, torpe, aprendo a nombrarla despacio.')
   writeFileSync(join(docs, 'contrato.txt'), 'Contrato de arriendo de departamento por doce meses, con renovación automática y pago mensual.')
   mkdirSync(join(docs, 'Respaldos'))
   writeFileSync(join(docs, 'Respaldos', 'viejo.zip'), buildZip([{ name: 'Poemas/rosa_v1.txt', data: 'Para Rosa, primer borrador del poema. Tus manos guardan la luz.' }]))
   writeFileSync(join(data, 'settings.json'), JSON.stringify({ folders: [docs], lang: 'es', watchFolders: false, indexOnStart: false }))
 
-  // Con MEDIUM_E2E_EXECUTABLE se prueba la aplicación ya empaquetada en vez del código fuente.
-  const packaged = process.env['MEDIUM_E2E_EXECUTABLE']
+  // Con OUIJA_E2E_EXECUTABLE se prueba la aplicación ya empaquetada en vez del código fuente.
+  const packaged = process.env['OUIJA_E2E_EXECUTABLE']
   app = await electron.launch({
     ...(packaged ? { executablePath: resolve(packaged), args: ['--no-sandbox'] } : { args: [resolve('.'), '--no-sandbox'] }),
-    env: { ...process.env, MEDIUM_USER_DATA: data, ELECTRON_RENDERER_URL: '' }
+    env: { ...process.env, OUIJA_USER_DATA: data, ELECTRON_RENDERER_URL: '' }
   })
   page = await app.firstWindow()
   await page.waitForLoadState('domcontentloaded')
@@ -43,7 +43,7 @@ afterAll(async () => {
 })
 
 const call = <T>(fn: string, ...args: unknown[]): Promise<T> =>
-  page.evaluate(([name, a]) => (window as unknown as { medium: Record<string, (...x: unknown[]) => unknown> }).medium[name as string](...(a as unknown[])) as unknown, [fn, args]) as Promise<T>
+  page.evaluate(([name, a]) => (window as unknown as { ouija: Record<string, (...x: unknown[]) => unknown> }).ouija[name as string](...(a as unknown[])) as unknown, [fn, args]) as Promise<T>
 
 describe('ventana y seguridad', () => {
   it('es una ventana sin marco del sistema, que se puede minimizar y no tapa a las demás', async () => {
@@ -66,11 +66,11 @@ describe('ventana y seguridad', () => {
       require: typeof (window as unknown as { require?: unknown }).require,
       process: typeof (window as unknown as { process?: unknown }).process,
       ipc: typeof (window as unknown as { ipcRenderer?: unknown }).ipcRenderer,
-      keys: Object.keys((window as unknown as { medium: object }).medium).sort()
+      keys: Object.keys((window as unknown as { ouija: object }).ouija).sort()
     }))
     expect(surface).toMatchObject({ require: 'undefined', process: 'undefined', ipc: 'undefined' })
     expect(surface.keys).toEqual(
-      ['addFolder', 'addSuggestedFolder', 'aiConfig', 'aiForgetKey', 'aiListModels', 'aiSave', 'aiValidate', 'appInfo', 'ask', 'bringToPresent', 'cancelIndex', 'decideNames', 'exportFile', 'fileKinds', 'finishOnboarding', 'forgetAll', 'getSettings', 'ghosts', 'indexNow', 'indexState', 'mcpConfig', 'minimize', 'ollamaStatus', 'onChanges', 'onIndexState', 'onSetupState', 'onShown', 'openFile', 'people', 'quit', 'recentChanges', 'removeFolder', 'setSettings', 'setupCancel', 'setupStart', 'setupState', 'showInFolder', 'suggestFolders', 'timeline', 'toggleMaximize', 'updateCheck', 'updateDownload', 'updateInstall', 'updateState', 'onUpdateState', 'trashList', 'trashReveal', 'trashRestore'].sort()
+      ['addFolder', 'addSuggestedFolder', 'aiConfig', 'aiForgetKey', 'aiListModels', 'aiSave', 'aiValidate', 'appInfo', 'ask', 'bringToPresent', 'cancelIndex', 'decideNames', 'exportFile', 'fileKinds', 'finishOnboarding', 'forgetAll', 'getSettings', 'ghosts', 'indexNow', 'indexState', 'localModels', 'mcpConfig', 'minimize', 'ollamaStatus', 'onChanges', 'onIndexState', 'onSetupState', 'onShown', 'openFile', 'people', 'quit', 'recentChanges', 'removeFolder', 'setSettings', 'setupCancel', 'setupStart', 'setupState', 'showInFolder', 'suggestFolders', 'timeline', 'toggleMaximize', 'updateCheck', 'updateDownload', 'updateInstall', 'updateState', 'onUpdateState', 'trashList', 'trashReveal', 'trashRestore'].sort()
     )
   })
 
@@ -124,7 +124,7 @@ describe('con Ollama real', () => {
 
     const seen: string[] = []
     await page.exposeFunction('__seen', (phase: string) => seen.push(phase))
-    await page.evaluate(() => (window as unknown as { medium: { onIndexState: (cb: (s: { phase: string }) => void) => void } }).medium.onIndexState((s) => void (window as unknown as { __seen: (p: string) => void }).__seen(s.phase)))
+    await page.evaluate(() => (window as unknown as { ouija: { onIndexState: (cb: (s: { phase: string }) => void) => void } }).ouija.onIndexState((s) => void (window as unknown as { __seen: (p: string) => void }).__seen(s.phase)))
 
     await call('indexNow')
     const deadline = Date.now() + 150_000
@@ -162,7 +162,7 @@ describe('con Ollama real', () => {
     await page.locator('input').fill('¿dónde está el poema para Rosa?')
     await page.keyboard.press('Enter')
     await page.getByText('poema.txt').first().waitFor({ timeout: 60_000 })
-    await page.screenshot({ path: join(tmpdir(), 'medium-e2e-results.png') })
+    await page.screenshot({ path: join(tmpdir(), 'ouija-e2e-results.png') })
     expect(await page.getByText('rosa_v1.txt').count()).toBeGreaterThan(0)
   })
 })
@@ -185,11 +185,11 @@ describe('salir', () => {
     const tabs = async () => page.evaluate(() => [...document.querySelectorAll('nav button')].map((b) => b.textContent).join(' '))
     const expected = { pt: 'Invocar Fantasmas Pessoas Forca Ajustes', fr: 'Invoquer Fantômes Personnes Potence Réglages', ja: '召喚 幽霊 人物 絞首台 設定', zh: '召唤 幽灵 人物 绞刑架 设置', en: 'Summon Ghosts People Gallows Settings' }
     for (const [lang, text] of Object.entries(expected)) {
-      await page.evaluate((l) => (window as unknown as { medium: { setSettings(p: object): Promise<unknown> } }).medium.setSettings({ lang: l }), lang)
+      await page.evaluate((l) => (window as unknown as { ouija: { setSettings(p: object): Promise<unknown> } }).ouija.setSettings({ lang: l }), lang)
       await page.reload()
       await expect.poll(tabs).toBe(text)
     }
-    await page.evaluate(() => (window as unknown as { medium: { setSettings(p: object): Promise<unknown> } }).medium.setSettings({ lang: 'es' }))
+    await page.evaluate(() => (window as unknown as { ouija: { setSettings(p: object): Promise<unknown> } }).ouija.setSettings({ lang: 'es' }))
     await page.reload()
     await expect.poll(tabs).toBe('Invocar Fantasmas Personas Patíbulo Ajustes')
   })

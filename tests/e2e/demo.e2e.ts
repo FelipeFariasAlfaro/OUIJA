@@ -16,15 +16,15 @@ let data: string
 const chaos = resolve('fixtures/chaos')
 
 const call = <T>(fn: string, ...args: unknown[]): Promise<T> =>
-  page.evaluate(([name, a]) => (window as unknown as { medium: Record<string, (...x: unknown[]) => unknown> }).medium[name as string](...(a as unknown[])) as unknown, [fn, args]) as Promise<T>
+  page.evaluate(([name, a]) => (window as unknown as { ouija: Record<string, (...x: unknown[]) => unknown> }).ouija[name as string](...(a as unknown[])) as unknown, [fn, args]) as Promise<T>
 
 const names = (r: SearchAnswer) => r.matches.map((m) => m.name)
 
 beforeAll(async () => {
   execFileSync('node', ['scripts/make-fixtures.mjs'])
-  data = mkdtempSync(join(tmpdir(), 'medium-demo-'))
+  data = mkdtempSync(join(tmpdir(), 'ouija-demo-'))
   writeFileSync(join(data, 'settings.json'), JSON.stringify({ folders: [chaos], watchFolders: false, indexOnStart: false, ocrImages: false }))
-  app = await electron.launch({ args: [resolve('.'), '--no-sandbox'], env: { ...process.env, MEDIUM_USER_DATA: data, ELECTRON_RENDERER_URL: '' } })
+  app = await electron.launch({ args: [resolve('.'), '--no-sandbox'], env: { ...process.env, OUIJA_USER_DATA: data, ELECTRON_RENDERER_URL: '' } })
   page = await app.firstWindow()
   await page.waitForLoadState('domcontentloaded')
   await call('indexNow')
@@ -94,7 +94,7 @@ describe('demo: carpeta caótica', () => {
     await page.keyboard.press('Enter')
     await page.getByRole('listitem').filter({ hasText: 'rosa_v1.txt' }).first().waitFor({ timeout: 60_000 })
     await page.getByText('Resucitado').first().waitFor({ timeout: 10_000 })
-    await page.screenshot({ path: join(tmpdir(), 'medium-demo-poema.png') })
+    await page.screenshot({ path: join(tmpdir(), 'ouija-demo-poema.png') })
     // La X borra la pregunta y la respuesta, y deja el cursor listo para otra.
     await page.getByRole('button', { name: 'Borrar la pregunta' }).click()
     expect(await page.locator('input').inputValue()).toBe('')
@@ -162,7 +162,7 @@ describe('demo: carpeta caótica', () => {
     }
   }, 120_000)
   it('"Traer al presente": el WordPerfect de 2008 queda como un archivo de hoy, sin tocar el original', async () => {
-    const out = mkdtempSync(join(tmpdir(), 'medium-present-'))
+    const out = mkdtempSync(join(tmpdir(), 'ouija-present-'))
     await app.evaluate(({ dialog, shell }, dir) => {
       dialog.showOpenDialog = (async () => ({ canceled: false, filePaths: [dir] })) as typeof dialog.showOpenDialog
       shell.showItemInFolder = () => undefined

@@ -18,6 +18,11 @@ export interface Settings {
   embedModel: string
   /** Modelo de chat. Vacío = elegir uno instalado automáticamente. */
   chatModel: string
+  /**
+   * Responder con un servidor local compatible con OpenAI (LM Studio, llama.cpp, Jan, vLLM…) en vez
+   * de Ollama. `null` = Ollama. La búsqueda por significado sigue usando el modelo de embeddings de Ollama.
+   */
+  localServer: LocalServerChoice | null
   /** Dimensión de los vectores del modelo de embeddings (se detecta sola). */
   embedDimensions: number
   indexOnStart: boolean
@@ -38,6 +43,22 @@ export interface Settings {
   ai: AiSettings
 }
 
+export interface LocalServerChoice {
+  /** Siempre en este equipo, por ejemplo `http://127.0.0.1:1234`. */
+  baseUrl: string
+  model: string
+  /** Nombre para mostrar (LM Studio, Jan…). */
+  name?: string
+}
+
+/** Modelos locales que pueden dar las respuestas. */
+export interface LocalModels {
+  /** Modelos de chat instalados en Ollama. */
+  ollama: string[]
+  /** Servidores compatibles con OpenAI encontrados en este equipo. */
+  servers: { name: string; baseUrl: string; models: string[] }[]
+}
+
 export interface OllamaStatus {
   available: boolean
   host: string
@@ -46,6 +67,8 @@ export interface OllamaStatus {
   embedModelInstalled: boolean
   /** Modelo local de respuestas instalado, si hay uno (se informa aunque las respuestas las dé un servicio externo). */
   chatModel?: string
+  /** Si el modelo de respuestas lo sirve otro programa local (LM Studio, Jan…), su nombre. */
+  chatServer?: string
   /** Pasos pendientes para dejarlo listo. La interfaz los traduce. */
   hints: OllamaHint[]
 }
@@ -96,55 +119,56 @@ export interface ExportResult {
 
 /** Canales IPC. La interfaz solo puede invocar lo que figura aquí. */
 export const IPC = {
-  ask: 'medium:ask',
-  ghosts: 'medium:ghosts',
-  people: 'medium:people',
-  timeline: 'medium:timeline',
-  decideNames: 'medium:decide-names',
-  openFile: 'medium:open-file',
-  showInFolder: 'medium:show-in-folder',
-  exportFile: 'medium:export-file',
-  bringToPresent: 'medium:bring-to-present',
-  mcpConfig: 'medium:mcp-config',
-  getSettings: 'medium:get-settings',
-  setSettings: 'medium:set-settings',
-  addFolder: 'medium:add-folder',
-  removeFolder: 'medium:remove-folder',
-  indexNow: 'medium:index-now',
-  cancelIndex: 'medium:cancel-index',
-  indexState: 'medium:index-state',
-  forgetAll: 'medium:forget-all',
-  aiConfig: 'medium:ai-config',
-  aiValidate: 'medium:ai-validate',
-  aiListModels: 'medium:ai-list-models',
-  aiSave: 'medium:ai-save',
-  aiForgetKey: 'medium:ai-forget-key',
-  recentChanges: 'medium:recent-changes',
-  fileKinds: 'medium:file-kinds',
-  trashList: 'medium:trash-list',
-  trashRestore: 'medium:trash-restore',
-  trashReveal: 'medium:trash-reveal',
-  setupState: 'medium:setup-state',
-  updateState: 'medium:update-state',
-  updateCheck: 'medium:update-check',
-  updateDownload: 'medium:update-download',
-  updateInstall: 'medium:update-install',
-  setupStart: 'medium:setup-start',
-  setupCancel: 'medium:setup-cancel',
-  suggestFolders: 'medium:suggest-folders',
-  addSuggestedFolder: 'medium:add-suggested-folder',
-  finishOnboarding: 'medium:finish-onboarding',
-  ollamaStatus: 'medium:ollama-status',
-  appInfo: 'medium:app-info',
-  minimize: 'medium:minimize',
-  toggleMaximize: 'medium:toggle-maximize',
-  quit: 'medium:quit',
+  ask: 'ouija:ask',
+  ghosts: 'ouija:ghosts',
+  people: 'ouija:people',
+  timeline: 'ouija:timeline',
+  decideNames: 'ouija:decide-names',
+  openFile: 'ouija:open-file',
+  showInFolder: 'ouija:show-in-folder',
+  exportFile: 'ouija:export-file',
+  bringToPresent: 'ouija:bring-to-present',
+  mcpConfig: 'ouija:mcp-config',
+  getSettings: 'ouija:get-settings',
+  setSettings: 'ouija:set-settings',
+  addFolder: 'ouija:add-folder',
+  removeFolder: 'ouija:remove-folder',
+  indexNow: 'ouija:index-now',
+  cancelIndex: 'ouija:cancel-index',
+  indexState: 'ouija:index-state',
+  forgetAll: 'ouija:forget-all',
+  aiConfig: 'ouija:ai-config',
+  aiValidate: 'ouija:ai-validate',
+  aiListModels: 'ouija:ai-list-models',
+  aiSave: 'ouija:ai-save',
+  aiForgetKey: 'ouija:ai-forget-key',
+  recentChanges: 'ouija:recent-changes',
+  localModels: 'ouija:local-models',
+  fileKinds: 'ouija:file-kinds',
+  trashList: 'ouija:trash-list',
+  trashRestore: 'ouija:trash-restore',
+  trashReveal: 'ouija:trash-reveal',
+  setupState: 'ouija:setup-state',
+  updateState: 'ouija:update-state',
+  updateCheck: 'ouija:update-check',
+  updateDownload: 'ouija:update-download',
+  updateInstall: 'ouija:update-install',
+  setupStart: 'ouija:setup-start',
+  setupCancel: 'ouija:setup-cancel',
+  suggestFolders: 'ouija:suggest-folders',
+  addSuggestedFolder: 'ouija:add-suggested-folder',
+  finishOnboarding: 'ouija:finish-onboarding',
+  ollamaStatus: 'ouija:ollama-status',
+  appInfo: 'ouija:app-info',
+  minimize: 'ouija:minimize',
+  toggleMaximize: 'ouija:toggle-maximize',
+  quit: 'ouija:quit',
   /** Eventos del proceso principal hacia la interfaz. */
-  onIndexState: 'medium:on-index-state',
-  onShown: 'medium:on-shown',
-  onSetupState: 'medium:on-setup-state',
-  onUpdateState: 'medium:on-update-state',
-  onChanges: 'medium:on-changes'
+  onIndexState: 'ouija:on-index-state',
+  onShown: 'ouija:on-shown',
+  onSetupState: 'ouija:on-setup-state',
+  onUpdateState: 'ouija:on-update-state',
+  onChanges: 'ouija:on-changes'
 } as const
 
 // --- Puesta en marcha inicial -----------------------------------------------
@@ -287,8 +311,8 @@ export interface RestoreResponse {
 
 export type NameDecision = 'merge' | 'split' | 'clear'
 
-/** API que el preload expone como `window.medium`. */
-export interface MediumApi {
+/** API que el preload expone como `window.ouija`. */
+export interface OuijaApi {
   /** Pregunta al índice. `filters` restringe por tipo de archivo y por fecha de modificación. */
   ask(question: string, filters?: AskFilters): Promise<SearchAnswer>
   ghosts(): Promise<Ghost[]>
@@ -316,6 +340,8 @@ export interface MediumApi {
   appInfo(): Promise<AppInfo>
   /** Tipos de archivo que hay en el índice, con su cantidad (para elegir cuáles incluir en las búsquedas). */
   fileKinds(): Promise<KindCount[]>
+  /** Modelos locales disponibles para responder: los de Ollama y los de servidores compatibles con OpenAI. */
+  localModels(): Promise<LocalModels>
   /** Lo último que OUIJA detectó: archivos nuevos, modificados y eliminados. */
   recentChanges(limit?: number): Promise<ChangeDto[]>
   /** Archivos que hay hoy en la papelera, con lo que OUIJA sabe de ellos. */
