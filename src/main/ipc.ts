@@ -1,8 +1,10 @@
 import { app, dialog, ipcMain, shell, type IpcMainEvent, type IpcMainInvokeEvent } from 'electron'
 import type { AiSaveInput } from '@shared/ai'
-import { IPC, type AppInfo, type ExportResult, type PresentResult, type Settings } from '@shared/ipc'
+import { IPC, type AskFilters, type AppInfo, type ExportResult, type PresentResult, type Settings } from '@shared/ipc'
 import type { Lang } from '@shared/langs'
+import { ALL_KINDS, type FileKind } from '@shared/filetypes'
 import type { MediumCore } from './core/medium'
+import type { Updater } from './updater'
 import { suggestFolders } from './core/setup'
 import { AI_PROVIDER_IDS } from '@shared/ai'
 import { asOneOf, asString, isTrustedSender } from './security'
@@ -18,6 +20,19 @@ const DIALOG: Record<Lang, { save: string; add: string; resurrect: string; prese
   zh: { save: '保存到这里', add: '交给 OUIJA', resurrect: '在此复活', present: '带到这里' }
 }
 
+/** Valida los filtros de búsqueda que llegan de la interfaz: lo que no se reconoce se descarta. */
+function asFilters(raw: unknown): AskFilters | undefined {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return undefined
+  const o = raw as Record<string, unknown>
+  const date = (v: unknown): number | undefined => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : undefined)
+  const kinds = Array.isArray(o.kinds) ? [...new Set(o.kinds.filter((k): k is FileKind => typeof k === 'string' && (ALL_KINDS as string[]).includes(k)))] : []
+  const out: AskFilters = {}
+  if (kinds.length > 0) out.kinds = kinds
+  if (date(o.dateFrom) !== undefined) out.dateFrom = date(o.dateFrom)
+  if (date(o.dateTo) !== undefined) out.dateTo = date(o.dateTo)
+  return Object.keys(out).length > 0 ? out : undefined
+}
+
 export interface IpcContext {
   core: MediumCore
   palette: PaletteWindow
@@ -29,6 +44,7 @@ export interface IpcContext {
   getSettings(): Settings
   /** JSON para el `mcp.json` de un agente, con las rutas de esta instalación. */
   mcpConfig(): string
+  updater: Updater
 }
 
 /**
@@ -50,7 +66,7 @@ export function registerIpc(ctx: IpcContext): void {
   /** Rutas resucitadas en esta sesión: lo único que `trashReveal` acepta. */
   const restoredPaths = new Set<string>()
 
-  handle(IPC.ask, (_e, q) => core.ask(asString(q, 'pregunta', 2000)))
+  handle(IPC.ask, (_e, q, filters) => core.ask(asString(q, 'pregunta', 2000), asFilters(filters)))
   handle(IPC.ghosts, () => core.ghosts())
   handle(IPC.people, () => core.people())
   handle(IPC.timeline, (_e, id) => core.timeline(asString(id, 'id', 300)))
@@ -160,6 +176,10 @@ export function registerIpc(ctx: IpcContext): void {
     return result
   })
   handle(IPC.aiForgetKey, (_e, provider) => core.ai.forgetKey(asOneOf(provider, AI_PROVIDER_IDS, 'proveedor')))
+  handle(IPC.updateState, () => ctx.updater.value)
+  handle(IPC.updateCheck, () => ctx.updater.check())
+  handle(IPC.updateDownload, () => ctx.updater.download())
+  handle(IPC.updateInstall, () => ctx.updater.install())
   handle(IPC.setupState, () => core.setup.check())
   handle(IPC.setupStart, () => core.setup.start())
   handle(IPC.setupCancel, () => core.setup.cancel())
@@ -205,5 +225,6 @@ export function registerIpc(ctx: IpcContext): void {
 
   core.onState((state) => palette.send(IPC.onIndexState, state))
   core.setup.onState((state) => palette.send(IPC.onSetupState, state))
+  ctx.updater.onChange((state) => palette.send(IPC.onUpdateState, state))
   core.onChanges(() => palette.send(IPC.onChanges))
 }

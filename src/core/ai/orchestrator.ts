@@ -20,6 +20,11 @@ export interface AskOptions {
   now?: Date
   /** Extensiones que el usuario dejó fuera de las búsquedas. Se respetan siempre, también al relajar filtros. */
   excludeExtensions?: string[]
+  /**
+   * Filtros que eligió el usuario (tipo de archivo, fechas). Mandan sobre lo que infiera el modelo y
+   * se mantienen aunque se relajen los filtros inferidos.
+   */
+  scope?: FileFilter
 }
 
 export interface AskResult {
@@ -320,7 +325,11 @@ export class Orchestrator {
     // 3. Buscar; si los filtros inferidos no dejan nada, repetir sin ellos.
     const floor = mode === 'full' ? this.minSimilarity : this.lightMinSimilarity
     const text = `${parsed.query} ${q}`
-    const scoped = (f: FileFilter | undefined): FileFilter | undefined => (excluded.length > 0 ? { ...f, excludeExtensions: excluded } : f)
+    const scope = options.scope
+    const scoped = (f: FileFilter | undefined): FileFilter | undefined => {
+      if (!scope && excluded.length === 0) return f
+      return { ...f, ...scope, ...(excluded.length > 0 ? { excludeExtensions: excluded } : {}) }
+    }
     let hits = await this.search(q, text, embedding, scoped(parsed.filter), floor)
     let relaxed = false
     if (hits.length === 0 && parsed.filter) {

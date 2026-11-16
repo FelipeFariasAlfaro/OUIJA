@@ -149,7 +149,7 @@ describe('modelo de lenguaje externo', () => {
     provider.removeAllListeners('request')
     provider.on('request', (_req, res) => res.writeHead(401, { 'content-type': 'application/json' }).end(JSON.stringify({ error: { message: 'invalid x-api-key' } })))
 
-    await page.getByRole('button', { name: 'Buscar', exact: true }).click()
+    await page.getByRole('button', { name: 'Invocar', exact: true }).click()
     await page.getByPlaceholder(/Pregunta por un archivo/).fill('¿dónde está el poema para Rosa?')
     await page.keyboard.press('Enter')
     await page.getByText('La clave no es válida o fue revocada.').waitFor({ timeout: 30_000 })

@@ -75,10 +75,13 @@ jobs:
         with:
           name: installers-${{ matrix.name }}
           if-no-files-found: error
+          # latest*.yml y *.blockmap permiten que la app instalada se actualice sola.
           path: |
             release/*.AppImage
             release/*.deb
             release/*.exe
+            release/*.blockmap
+            release/latest*.yml
 
   publish:
     name: Publish release
@@ -97,8 +100,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ needs.verify.outputs.version }}
+        # The notes come from the CHANGELOG.md section of this version; without one, GitHub generates them.
         run: |
+          awk -v v="$VERSION" '$0 ~ "^## \\[" v "\\]" {on=1; next} /^## \[/ {on=0} /^\[[0-9]/ {on=0} on' CHANGELOG.md > notes.md
+          if [ -s notes.md ]; then NOTES=(--notes-file notes.md); else NOTES=(--generate-notes); fi
           gh release create "v${VERSION}" dist-release/* \
             --target "${GITHUB_SHA}" \
             --title "OUIJA v${VERSION}" \
-            --generate-notes
+            "${NOTES[@]}"

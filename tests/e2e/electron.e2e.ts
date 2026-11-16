@@ -70,7 +70,7 @@ describe('ventana y seguridad', () => {
     }))
     expect(surface).toMatchObject({ require: 'undefined', process: 'undefined', ipc: 'undefined' })
     expect(surface.keys).toEqual(
-      ['addFolder', 'addSuggestedFolder', 'aiConfig', 'aiForgetKey', 'aiListModels', 'aiSave', 'aiValidate', 'appInfo', 'ask', 'bringToPresent', 'cancelIndex', 'decideNames', 'exportFile', 'fileKinds', 'finishOnboarding', 'forgetAll', 'getSettings', 'ghosts', 'indexNow', 'indexState', 'mcpConfig', 'minimize', 'ollamaStatus', 'onChanges', 'onIndexState', 'onSetupState', 'onShown', 'openFile', 'people', 'quit', 'recentChanges', 'removeFolder', 'setSettings', 'setupCancel', 'setupStart', 'setupState', 'showInFolder', 'suggestFolders', 'timeline', 'toggleMaximize', 'trashList', 'trashReveal', 'trashRestore'].sort()
+      ['addFolder', 'addSuggestedFolder', 'aiConfig', 'aiForgetKey', 'aiListModels', 'aiSave', 'aiValidate', 'appInfo', 'ask', 'bringToPresent', 'cancelIndex', 'decideNames', 'exportFile', 'fileKinds', 'finishOnboarding', 'forgetAll', 'getSettings', 'ghosts', 'indexNow', 'indexState', 'mcpConfig', 'minimize', 'ollamaStatus', 'onChanges', 'onIndexState', 'onSetupState', 'onShown', 'openFile', 'people', 'quit', 'recentChanges', 'removeFolder', 'setSettings', 'setupCancel', 'setupStart', 'setupState', 'showInFolder', 'suggestFolders', 'timeline', 'toggleMaximize', 'updateCheck', 'updateDownload', 'updateInstall', 'updateState', 'onUpdateState', 'trashList', 'trashReveal', 'trashRestore'].sort()
     )
   })
 
@@ -183,7 +183,7 @@ describe('navegación', () => {
 describe('salir', () => {
   it('habla seis idiomas: la interfaz cambia al instante', async () => {
     const tabs = async () => page.evaluate(() => [...document.querySelectorAll('nav button')].map((b) => b.textContent).join(' '))
-    const expected = { pt: 'Buscar Fantasmas Pessoas Forca Ajustes', fr: 'Chercher Fantômes Personnes Potence Réglages', ja: '検索 幽霊 人物 絞首台 設定', zh: '搜索 幽灵 人物 绞刑架 设置', en: 'Search Ghosts People Gallows Settings' }
+    const expected = { pt: 'Invocar Fantasmas Pessoas Forca Ajustes', fr: 'Invoquer Fantômes Personnes Potence Réglages', ja: '召喚 幽霊 人物 絞首台 設定', zh: '召唤 幽灵 人物 绞刑架 设置', en: 'Summon Ghosts People Gallows Settings' }
     for (const [lang, text] of Object.entries(expected)) {
       await page.evaluate((l) => (window as unknown as { medium: { setSettings(p: object): Promise<unknown> } }).medium.setSettings({ lang: l }), lang)
       await page.reload()
@@ -191,7 +191,7 @@ describe('salir', () => {
     }
     await page.evaluate(() => (window as unknown as { medium: { setSettings(p: object): Promise<unknown> } }).medium.setSettings({ lang: 'es' }))
     await page.reload()
-    await expect.poll(tabs).toBe('Buscar Fantasmas Personas Patíbulo Ajustes')
+    await expect.poll(tabs).toBe('Invocar Fantasmas Personas Patíbulo Ajustes')
   })
   it('el botón × cierra OUIJA por completo', async () => {
     const closed = new Promise<void>((ok) => app.process().once('exit', () => ok()))

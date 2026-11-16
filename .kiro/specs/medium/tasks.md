@@ -117,3 +117,4 @@
   - _Requirements: R15, R16, R17_
 
 - [x] 19. Release 0.2.0: README framed around the resurrection of desktop search; the release takes the version from `package.json` and only bumps the patch if that tag already exists
+- [x] 20. Updates: electron-updater with GitHub Releases (Windows NSIS and AppImage install on restart; .deb and dev open the release page), banner and Settings card, `autoUpdate` setting; the release workflow uploads `latest*.yml` and blockmaps

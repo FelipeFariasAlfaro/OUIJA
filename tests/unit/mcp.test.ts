@@ -47,3 +47,14 @@ describe('idiomas', () => {
     expect(langFromLocale('de-DE')).toBe('en')
   })
 })
+
+describe('versiones', () => {
+  it('compara versiones numéricamente', async () => {
+    const { isNewer } = await import('../../src/shared/version')
+    expect(isNewer('0.10.0', '0.9.9')).toBe(true)
+    expect(isNewer('v0.3.0', '0.2.0')).toBe(true)
+    expect(isNewer('0.2.0', '0.2.0')).toBe(false)
+    expect(isNewer('0.2.0-beta', '0.2.0')).toBe(false)
+    expect(isNewer('0.1.9', '0.2.0')).toBe(false)
+  })
+})

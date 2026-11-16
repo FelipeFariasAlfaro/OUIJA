@@ -5,6 +5,7 @@ import { api } from './api'
 import { GhostIcon } from './components/ui'
 import Ambience from './components/Ambience'
 import Tour from './components/Tour'
+import UpdateBanner from './components/UpdateBanner'
 import WindowControls from './components/WindowControls'
 import { I18nContext, makeI18n, type Lang } from './i18n'
 import GallowsView from './views/GallowsView'
@@ -141,6 +142,8 @@ export default function App() {
             <WindowControls />
           </div>
         </header>
+
+        <UpdateBanner />
 
         {view === 'search' && <SearchView key={lang} hasFolders={(settings?.folders.length ?? 0) > 0 || index.indexed > 0} onAddFolder={addFolder} changesKey={`${index.phase}-${index.indexed}`} onGallows={() => setView('gallows')} />}
         {view === 'ghosts' && <GhostsView key={`${lang}-${index.phase}`} />}

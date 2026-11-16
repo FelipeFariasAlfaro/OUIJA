@@ -8,6 +8,7 @@ import { MediumCore } from './core/medium'
 import { SecretStore } from './core/secrets'
 import { SettingsStore } from './core/settings'
 import { registerIpc } from './ipc'
+import { Updater } from './updater'
 import { runMcp } from './mcp/run'
 import { registerShortcut, type ShortcutResult } from './shortcut'
 import { createTray, updateTrayMenu, type TrayActions } from './tray'
@@ -92,6 +93,7 @@ app.whenReady().then(async () => {
     tray = null // sin bandeja: queda el atajo y volver a abrir la aplicación
   }
   applyShortcut(settings.value.shortcut)
+  const updater = new Updater()
 
   registerIpc({
     core,
@@ -100,6 +102,7 @@ app.whenReady().then(async () => {
     devServerUrl,
     getSettings: () => settings.value,
     mcpConfig,
+    updater,
     appInfo: (): AppInfo => ({
       version: app.getVersion(),
       platform: process.platform,
@@ -111,6 +114,7 @@ app.whenReady().then(async () => {
     onSettingsChanged: (after, before) => {
       if (after.shortcut !== before.shortcut) applyShortcut(after.shortcut)
       if (tray && after.lang !== before.lang) updateTrayMenu(tray, after.lang, actions)
+      if (after.autoUpdate !== before.autoUpdate) updater.schedule(after.autoUpdate)
     }
   })
 
@@ -120,7 +124,11 @@ app.whenReady().then(async () => {
 
   app.on('second-instance', () => palette.show(notifyShown))
   app.on('will-quit', () => globalShortcut.unregisterAll())
-  app.on('before-quit', () => void core.close())
+  updater.schedule(settings.value.autoUpdate)
+  app.on('before-quit', () => {
+    updater.stop()
+    void core.close()
+  })
 })
 
 // Cerrar la ventana cierra OUIJA. Mientras esté minimizada sigue activa y vigilando las carpetas.

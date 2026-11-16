@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import type { AppInfo, IndexState, KindCount, OllamaStatus, Settings } from '@shared/ipc'
+import type { AppInfo, IndexState, KindCount, OllamaStatus, Settings, UpdateState } from '@shared/ipc'
 import { KIND_LABEL } from '@shared/filetypes'
 import type { Lang } from '@shared/types'
 import { LANG_IDS, LANG_INFO } from '@shared/langs'
@@ -23,6 +23,11 @@ export default function SettingsView({ settings, index, onSettings, onTour }: { 
   const { lang, t, fmtDate } = useI18n()
   const [kinds, setKinds] = useState<KindCount[]>([])
   const [mcp, setMcp] = useState<string | null>(null)
+  const [upd, setUpd] = useState<UpdateState | null>(null)
+  useEffect(() => {
+    void api.updateState().then(setUpd).catch(() => undefined)
+    return api.onUpdateState(setUpd)
+  }, [])
   const [copied, setCopied] = useState(false)
   const [ollama, setOllama] = useState<OllamaStatus | null>(null)
   const [info, setInfo] = useState<AppInfo | null>(null)
@@ -287,6 +292,43 @@ export default function SettingsView({ settings, index, onSettings, onTour }: { 
           </p>
         )}
         {info && /gnome/i.test(info.desktop) && <p className="mt-1 text-[12px] text-zinc-500">{t.trayGnome}</p>}
+      </Card>
+
+      <Card title={t.updTitle}>
+        {upd && <p className="text-[13px] text-zinc-300">{t.updVersion(upd.current)}</p>}
+        <label className="mt-2 flex items-start gap-2 text-[13px] text-zinc-300">
+          <input type="checkbox" checked={settings.autoUpdate} onChange={(e) => void api.setSettings({ autoUpdate: e.target.checked }).then(onSettings)} className="mt-0.5 accent-violet-500" />
+          <span>
+            {t.updAuto}
+            <span className="block text-[11px] text-zinc-500">{t.updAutoHelp}</span>
+          </span>
+        </label>
+        <div className="mt-2.5 flex flex-wrap items-center gap-2" data-testid="update-settings">
+          <ActionButton disabled={upd?.status === 'checking' || upd?.status === 'downloading'} onClick={() => void api.updateCheck().then(setUpd)}>
+            {upd?.status === 'checking' ? t.updChecking : t.updCheck}
+          </ActionButton>
+          {upd?.status === 'none' && <span className="text-[12px] text-emerald-300">{t.updNone}</span>}
+          {upd?.status === 'error' && (
+            <span className="text-[12px] text-amber-200" title={upd.message}>
+              {t.updError}
+            </span>
+          )}
+          {upd?.status === 'available' && (
+            <>
+              <span className="text-[12px] text-violet-200">{t.updAvailable(upd.latest ?? '')}</span>
+              <ActionButton primary onClick={() => void api.updateDownload().then(setUpd)}>
+                {upd.canInstall ? t.updInstall : t.updDownload}
+              </ActionButton>
+            </>
+          )}
+          {upd?.status === 'downloading' && <span className="text-[12px] text-violet-200">{t.updDownloading(upd.percent ?? 0)}</span>}
+          {upd?.status === 'ready' && (
+            <ActionButton primary onClick={() => void api.updateInstall()}>
+              {t.updRestart}
+            </ActionButton>
+          )}
+        </div>
+        {upd && !upd.canInstall && <p className="mt-2 text-[11px] text-zinc-500">{t.updManual}</p>}
       </Card>
 
       <Card title={t.howToOpenTitle}>

@@ -9,10 +9,10 @@ import { buildObituary, GhostHunter } from '@core/ghosts'
 import { FatalIndexError, ImageReader, IndexPipeline, watchFolder, type Embedder, type FolderWatcher } from '@core/indexing'
 import { isVirtualPath, openContainer, parseVPath } from '@core/media'
 import { convertLegacyToModern, extractText, LEGACY_EXTENSIONS, SHEET_LEGACY_EXTENSIONS } from '@core/extract'
-import { SqliteStore } from '@core/memory'
+import { SqliteStore, type FileFilter } from '@core/memory'
 import { kindOf, type FileKind } from '@shared/filetypes'
 import type { Ghost, Person, PersonSummary, SearchAnswer } from '@shared/types'
-import type { ChangeDto, IndexState, KindCount, NameDecision, OllamaHint, OllamaStatus, RestoreOutcome, Settings, TrashItemDto, TrashOverview } from '@shared/ipc'
+import type { AskFilters, ChangeDto, IndexState, KindCount, NameDecision, OllamaHint, OllamaStatus, RestoreOutcome, Settings, TrashItemDto, TrashOverview } from '@shared/ipc'
 import { AiService } from './ai'
 import type { SecretStore } from './secrets'
 import type { SettingsStore } from './settings'
@@ -247,6 +247,20 @@ export class MediumCore {
     return [...counts].map(([kind, count]) => ({ kind, count })).sort((a, b) => b.count - a.count || a.kind.localeCompare(b.kind))
   }
 
+  /** Convierte los filtros de la interfaz en un filtro del índice (tipos → extensiones indexadas). */
+  private async scopeOf(filters: AskFilters | undefined): Promise<FileFilter | undefined> {
+    if (!filters) return undefined
+    const scope: FileFilter = {}
+    if (filters.kinds && filters.kinds.length > 0) {
+      const kinds = new Set(filters.kinds)
+      const exts = (await this.store.extensionCounts()).map((r) => r.ext).filter((ext) => kinds.has(kindOf(ext)))
+      scope.extensions = exts.length > 0 ? exts : ['\u0000'] // ningún archivo de esos tipos: no debe traer nada
+    }
+    if (filters.dateFrom !== undefined) scope.dateFrom = filters.dateFrom
+    if (filters.dateTo !== undefined) scope.dateTo = filters.dateTo
+    return Object.keys(scope).length > 0 ? scope : undefined
+  }
+
   /** Extensiones indexadas que pertenecen a los tipos que el usuario dejó fuera de las búsquedas. */
   private async excludedExtensions(): Promise<string[]> {
     const kinds = new Set(this.settings.excludedKinds)
@@ -256,7 +270,7 @@ export class MediumCore {
 
   // --- Preguntas ---------------------------------------------------------
 
-  async ask(question: string): Promise<SearchAnswer> {
+  async ask(question: string, filters?: AskFilters): Promise<SearchAnswer> {
     const { client, chatModel: configured } = await this.client()
     // En modo pasivo responde sin modelo: quien pregunta ya es un modelo de lenguaje (el agente MCP).
     const chatModel = this.deps.passive ? undefined : configured
@@ -275,7 +289,7 @@ export class MediumCore {
         }
       : undefined
     const orchestrator = new Orchestrator({ store: this.store, embedder: client, llm, entities: this.entityService })
-    const r = await orchestrator.ask(question, { lang: this.settings.lang, excludeExtensions: await this.excludedExtensions() })
+    const r = await orchestrator.ask(question, { lang: this.settings.lang, excludeExtensions: await this.excludedExtensions(), scope: await this.scopeOf(filters) })
     return {
       answer: r.answer,
       found: r.found,

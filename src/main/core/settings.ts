@@ -25,6 +25,7 @@ export const DEFAULT_SETTINGS: Settings = {
   onboarded: false,
   tourDone: false,
   ambience: true,
+  autoUpdate: true,
   ai: { ...DEFAULT_AI }
 }
 
@@ -82,6 +83,7 @@ export function sanitizeSettings(raw: unknown, base: Settings = DEFAULT_SETTINGS
     onboarded: bool(o.onboarded, base.onboarded),
     tourDone: bool(o.tourDone, base.tourDone),
     ambience: bool(o.ambience, base.ambience),
+    autoUpdate: bool(o.autoUpdate, base.autoUpdate),
     ai: o.ai === undefined ? base.ai : sanitizeAi(o.ai, base.ai)
   }
 }

@@ -30,6 +30,8 @@ export interface Settings {
   onboarded: boolean
   /** Niebla, relámpagos lejanos y algún fantasma de fondo. */
   ambience: boolean
+  /** Buscar versiones nuevas en GitHub al abrir y cada 6 horas. */
+  autoUpdate: boolean
   /** Ya se hizo (o se saltó) el recorrido guiado por las secciones. */
   tourDone: boolean
   /** Modelo de lenguaje: local o de un servicio externo. */
@@ -123,6 +125,10 @@ export const IPC = {
   trashRestore: 'medium:trash-restore',
   trashReveal: 'medium:trash-reveal',
   setupState: 'medium:setup-state',
+  updateState: 'medium:update-state',
+  updateCheck: 'medium:update-check',
+  updateDownload: 'medium:update-download',
+  updateInstall: 'medium:update-install',
   setupStart: 'medium:setup-start',
   setupCancel: 'medium:setup-cancel',
   suggestFolders: 'medium:suggest-folders',
@@ -137,6 +143,7 @@ export const IPC = {
   onIndexState: 'medium:on-index-state',
   onShown: 'medium:on-shown',
   onSetupState: 'medium:on-setup-state',
+  onUpdateState: 'medium:on-update-state',
   onChanges: 'medium:on-changes'
 } as const
 
@@ -190,6 +197,31 @@ export interface FolderSuggestion {
 export interface KindCount {
   kind: FileKind
   count: number
+}
+
+/** Filtros que el usuario elige en la búsqueda. */
+export interface AskFilters {
+  /** Solo estos tipos de archivo. Vacío o ausente = todos. */
+  kinds?: FileKind[]
+  /** Solo archivos modificados desde / hasta esta fecha (ms). */
+  dateFrom?: number
+  dateTo?: number
+}
+
+/** Actualizaciones publicadas en GitHub Releases. */
+export interface UpdateState {
+  status: 'idle' | 'checking' | 'none' | 'available' | 'downloading' | 'ready' | 'error'
+  /** Versión instalada. */
+  current: string
+  /** Versión nueva, si la hay. */
+  latest?: string
+  /** Página de la versión nueva. */
+  url?: string
+  /** Avance de la descarga (0 a 100). */
+  percent?: number
+  message?: string
+  /** `true` si esta instalación se actualiza sola (Windows y AppImage); si no, se abre la página de descarga. */
+  canInstall: boolean
 }
 
 export type ChangeKind = 'added' | 'modified' | 'removed'
@@ -257,7 +289,8 @@ export type NameDecision = 'merge' | 'split' | 'clear'
 
 /** API que el preload expone como `window.medium`. */
 export interface MediumApi {
-  ask(question: string): Promise<SearchAnswer>
+  /** Pregunta al índice. `filters` restringe por tipo de archivo y por fecha de modificación. */
+  ask(question: string, filters?: AskFilters): Promise<SearchAnswer>
   ghosts(): Promise<Ghost[]>
   people(): Promise<PersonSummary[]>
   timeline(personId: string): Promise<Person | null>
@@ -321,6 +354,14 @@ export interface MediumApi {
   /** Marca la bienvenida como hecha y empieza a indexar. */
   finishOnboarding(): Promise<Settings>
   onSetupState(listener: (state: SetupState) => void): () => void
+  /** Estado de las actualizaciones (versión nueva en GitHub, descarga, lista para instalar). */
+  updateState(): Promise<UpdateState>
+  updateCheck(): Promise<UpdateState>
+  /** Descarga la versión nueva o, si esta instalación no puede actualizarse sola, abre su página. */
+  updateDownload(): Promise<UpdateState>
+  /** Reinicia OUIJA instalando la versión descargada. */
+  updateInstall(): Promise<void>
+  onUpdateState(listener: (state: UpdateState) => void): () => void
   /** Minimiza la ventana a la barra de tareas o al dock. */
   minimize(): void
   /** Maximiza la ventana, o la devuelve a su tamaño si ya estaba maximizada. */

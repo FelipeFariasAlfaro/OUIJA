@@ -4,7 +4,10 @@ import type { Match, SearchAnswer } from '@shared/types'
 import { api } from '../api'
 import { KIND_LABEL, kindOf } from '@shared/filetypes'
 import { ActionButton, FileIcon, formatSize, GhostIcon, Highlight, MiddleEllipsis, ResurrectedBadge } from '../components/ui'
+import KindChips from '../components/KindChips'
 import RecentChanges from '../components/RecentChanges'
+import type { AskFilters, KindCount } from '@shared/ipc'
+import type { FileKind } from '@shared/filetypes'
 import { useI18n } from '../i18n'
 import { suggestionsFor } from '../suggestions'
 
@@ -18,6 +21,23 @@ const AI_PROBLEM = {
   'bad-response': 'aiErr_bad_response',
   blocked: 'aiErr_blocked'
 } as const
+
+type Period = 'any' | 'month' | 'year' | 'old'
+const PERIODS: { id: Period; key: 'periodAny' | 'periodMonth' | 'periodYear' | 'periodOld' }[] = [
+  { id: 'any', key: 'periodAny' },
+  { id: 'month', key: 'periodMonth' },
+  { id: 'year', key: 'periodYear' },
+  { id: 'old', key: 'periodOld' }
+]
+const DAY = 86_400_000
+function toFilters(kinds: FileKind[], period: Period, now = Date.now()): AskFilters | undefined {
+  const f: AskFilters = {}
+  if (kinds.length > 0) f.kinds = kinds
+  if (period === 'month') f.dateFrom = now - 31 * DAY
+  if (period === 'year') f.dateFrom = now - 366 * DAY
+  if (period === 'old') f.dateTo = now - 5 * 365 * DAY
+  return Object.keys(f).length > 0 ? f : undefined
+}
 
 const messageOf = (e: unknown): string => (e instanceof Error ? e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '') : String(e))
 
@@ -101,6 +121,14 @@ export default function SearchView({ hasFolders, onAddFolder, changesKey, onGall
   const [notice, setNotice] = useState<string | null>(null)
   const [topPerson, setTopPerson] = useState<string | undefined>()
   const input = useRef<HTMLInputElement>(null)
+  const [showFilters, setShowFilters] = useState(false)
+  const [kinds, setKinds] = useState<FileKind[]>([])
+  const [period, setPeriod] = useState<Period>('any')
+  const [kindCounts, setKindCounts] = useState<KindCount[]>([])
+  const activeFilters = (kinds.length > 0 ? 1 : 0) + (period !== 'any' ? 1 : 0)
+  useEffect(() => {
+    if (showFilters) void api.fileKinds().then(setKindCounts).catch(() => setKindCounts([]))
+  }, [showFilters])
   const seq = useRef(0)
 
   useEffect(() => {
@@ -126,7 +154,7 @@ export default function SearchView({ hasFolders, onAddFolder, changesKey, onGall
       setSelected(0)
       setNotice(null)
       try {
-        const res = await api.ask(q)
+        const res = await api.ask(q, toFilters(kinds, period))
         if (mine !== seq.current) return // llegó una respuesta vieja
         setResult(res)
       } catch (error) {
@@ -135,8 +163,15 @@ export default function SearchView({ hasFolders, onAddFolder, changesKey, onGall
         if (mine === seq.current) setLoading(false)
       }
     },
-    [t]
+    [t, kinds, period]
   )
+
+  // Al cambiar los filtros, la última pregunta se vuelve a hacer con ellos.
+  const lastAsked = useRef('')
+  lastAsked.current = asked
+  useEffect(() => {
+    if (lastAsked.current) void ask(lastAsked.current)
+  }, [kinds, period])
 
   const matches = useMemo(() => result?.matches ?? [], [result])
 
@@ -185,6 +220,18 @@ export default function SearchView({ hasFolders, onAddFolder, changesKey, onGall
           spellCheck={false}
           className="w-full bg-transparent text-[15px] text-zinc-100 outline-none placeholder:text-zinc-500"
         />
+        <button
+          type="button"
+          onClick={() => setShowFilters((s) => !s)}
+          aria-expanded={showFilters}
+          title={t.filtersToggle}
+          className={`flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-[11px] transition-colors ${showFilters || activeFilters > 0 ? 'bg-violet-400/15 text-violet-200' : 'text-zinc-500 hover:bg-white/10 hover:text-zinc-200'}`}
+        >
+          <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" aria-hidden="true">
+            <path d="M2 3.5h12M4.5 8h7M7 12.5h2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" fill="none" />
+          </svg>
+          {activeFilters > 0 ? t.filtersActive(activeFilters) : t.filtersToggle}
+        </button>
         {(query || result) && (
           <button
             type="button"
@@ -208,6 +255,44 @@ export default function SearchView({ hasFolders, onAddFolder, changesKey, onGall
           </button>
         )}
       </div>
+
+      {showFilters && (
+        <div className="mx-4 mt-2 space-y-2.5 rounded-xl border border-white/10 bg-white/[0.03] p-3" data-testid="search-filters">
+          <div>
+            <p className="mb-1.5 text-[11px] uppercase tracking-wider text-zinc-500">{t.filterTypes}</p>
+            <KindChips counts={kindCounts} selected={kinds} onChange={setKinds} />
+          </div>
+          <div>
+            <p className="mb-1.5 text-[11px] uppercase tracking-wider text-zinc-500">{t.filterPeriod}</p>
+            <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label={t.filterPeriod}>
+              {PERIODS.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={period === p.id}
+                  onClick={() => setPeriod(p.id)}
+                  className={`rounded-full border px-2.5 py-0.5 text-[11px] transition-colors ${period === p.id ? 'border-violet-400/60 bg-violet-400/15 text-violet-100' : 'border-white/10 text-zinc-400 hover:border-white/25 hover:text-zinc-200'}`}
+                >
+                  {t[p.key]}
+                </button>
+              ))}
+            </div>
+          </div>
+          {activeFilters > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                setKinds([])
+                setPeriod('any')
+              }}
+              className="text-[11px] text-violet-300 hover:text-violet-200"
+            >
+              {t.filtersClear}
+            </button>
+          )}
+        </div>
+      )}
 
       {notice && (
         <p role="status" className="mx-4 mt-2 truncate rounded-lg bg-white/[0.05] px-3 py-1.5 text-xs text-zinc-300" title={notice}>

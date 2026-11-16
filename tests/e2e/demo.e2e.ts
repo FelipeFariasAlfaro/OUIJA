@@ -89,7 +89,7 @@ describe('demo: carpeta caótica', () => {
   })
 
   it('la paleta muestra la respuesta con los dos poemas', async () => {
-    await page.getByRole('button', { name: 'Buscar', exact: true }).click() // sea cual sea la vista activa
+    await page.getByRole('button', { name: 'Invocar', exact: true }).click() // sea cual sea la vista activa
     await page.locator('input').fill('¿dónde está el poema para Rosa?')
     await page.keyboard.press('Enter')
     await page.getByRole('listitem').filter({ hasText: 'rosa_v1.txt' }).first().waitFor({ timeout: 60_000 })
@@ -178,5 +178,37 @@ describe('demo: carpeta caótica', () => {
     const again = await call<{ savedTo: string }>('bringToPresent', wpd.path)
     expect(again.savedTo).not.toBe(res.savedTo)
     rmSync(out, { recursive: true, force: true })
+  })
+  it('Invocar con filtros: solo los tipos elegidos, y la pregunta se repite al cambiarlos', async () => {
+    await page.getByRole('button', { name: 'Invocar', exact: true }).click()
+    await page.locator('input').first().fill('Rosa')
+    await page.keyboard.press('Enter')
+    await page.getByRole('listitem').filter({ hasText: 'rosa_v1.txt' }).first().waitFor({ timeout: 60_000 })
+    await page.getByRole('button', { name: 'Filtros' }).click()
+    const filters = page.getByTestId('search-filters')
+    await filters.getByRole('button', { name: /^Documento/ }).click()
+    await expect.poll(() => page.getByRole('button', { name: '1 filtro activo' }).count()).toBe(1)
+    // El poema en RTF (documento) sigue; el borrador en TXT (texto) desaparece.
+    await page.getByRole('listitem').filter({ hasText: 'borrador_final3.rtf' }).first().waitFor({ timeout: 60_000 })
+    await expect.poll(() => page.getByRole('listitem').filter({ hasText: 'rosa_v1.txt' }).count(), { timeout: 60_000 }).toBe(0)
+    await page.screenshot({ path: '/tmp/search-filters.png' })
+    // Directo por la API: solo audios.
+    const audio = await call<SearchAnswer>('ask', 'camila', { kinds: ['audio'] })
+    expect(audio.matches.length).toBeGreaterThan(0)
+    expect(audio.matches.every((m) => ['mp3', 'wav', 'ogg', 'm4a', 'flac', 'opus'].includes(m.ext))).toBe(true)
+    await filters.getByRole('button', { name: 'Quitar filtros' }).click()
+    await page.getByRole('button', { name: 'Filtros' }).click()
+  }, 180_000)
+  it('Fantasmas: se buscan por texto y se filtran por tipo de archivo', async () => {
+    await page.getByRole('button', { name: 'Fantasmas', exact: true }).click()
+    const list = page.getByTestId('ghost-list')
+    await expect.poll(() => list.innerText()).toContain('tesis_borrador_v2.wpd')
+    await page.getByRole('textbox', { name: 'Buscar entre los fantasmas…' }).fill('TESIS')
+    await expect.poll(() => list.getByRole('button').count()).toBe(1)
+    expect(await list.innerText()).toContain('tesis_borrador_v2.wpd')
+    await page.getByRole('textbox', { name: 'Buscar entre los fantasmas…' }).fill('')
+    await page.getByTestId('ghost-kinds').getByRole('button', { name: /^Imagen/ }).click()
+    await expect.poll(async () => (await list.innerText()).includes('viaje_peru_2011.jpg') && !(await list.innerText()).includes('rosa_v1.txt')).toBe(true)
+    await page.screenshot({ path: '/tmp/ghost-filters.png' })
   })
 })

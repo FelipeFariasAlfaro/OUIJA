@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { kindOf, type FileKind } from '@shared/filetypes'
+import KindChips from '../components/KindChips'
 import { motion } from 'framer-motion'
 import type { Ghost, GhostKind } from '@shared/types'
 import { api } from '../api'
@@ -11,6 +13,8 @@ const KIND_KEY: Record<GhostKind, 'kindStale' | 'kindDuplicate' | 'kindVersion'>
   version: 'kindVersion'
 }
 
+/** Para buscar sin importar tildes ni mayúsculas. */
+const fold = (s: string): string => s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
 const YEAR_MS = 365.25 * 24 * 3600 * 1000
 
 function Obituary({ ghost }: { ghost: Ghost }) {
@@ -108,7 +112,26 @@ export default function GhostsView() {
     }
   }, [])
 
-  const selected = ghosts?.find((g) => g.id === selectedId) ?? ghosts?.[0]
+  const [query, setQuery] = useState('')
+  const [kinds, setKinds] = useState<FileKind[]>([])
+  const [category, setCategory] = useState<GhostKind | 'all'>('all')
+  const kindOfGhost = (g: Ghost): FileKind => kindOf(g.name.includes('.') ? g.name.split('.').pop()!.toLowerCase() : '')
+  const counts = useMemo(() => {
+    const m = new Map<FileKind, number>()
+    for (const g of ghosts ?? []) m.set(kindOfGhost(g), (m.get(kindOfGhost(g)) ?? 0) + 1)
+    return [...m].map(([kind, count]) => ({ kind, count })).sort((a, b) => b.count - a.count)
+  }, [ghosts])
+  const categories = useMemo(() => (['stale', 'duplicate', 'version'] as GhostKind[]).filter((c) => ghosts?.some((g) => g.kind === c)), [ghosts])
+  const visible = useMemo(() => {
+    const q = fold(query.trim())
+    return (ghosts ?? []).filter(
+      (g) =>
+        (kinds.length === 0 || kinds.includes(kindOfGhost(g))) &&
+        (category === 'all' || g.kind === category) &&
+        (!q || [g.name, g.path, g.summary ?? '', ...g.people, ...g.topics].some((x) => fold(x).includes(q)))
+    )
+  }, [ghosts, query, kinds, category])
+  const selected = visible.find((g) => g.id === selectedId) ?? visible[0]
 
   return (
     <div className="flex min-h-0 flex-1 flex-col px-4">
@@ -117,10 +140,40 @@ export default function GhostsView() {
         <p className="text-xs text-zinc-500">{t.ghostsSub}</p>
       </div>
       {ghosts && ghosts.length === 0 && <p className="pt-10 text-center text-sm text-zinc-500">{t.ghostsEmpty}</p>}
+      {ghosts && ghosts.length > 0 && (
+        <div className="mb-3 space-y-2" data-testid="ghost-filters">
+          <div className="flex items-center gap-2">
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={t.ghostsSearch}
+              aria-label={t.ghostsSearch}
+              spellCheck={false}
+              className="min-w-0 flex-1 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-violet-400/60"
+            />
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value as GhostKind | 'all')}
+              aria-label={t.ghostsTitle}
+              className="rounded-lg border border-white/10 bg-[#13131f] px-2 py-1.5 text-xs text-zinc-300"
+            >
+              <option value="all">{t.ghostsAll}</option>
+              {categories.map((c) => (
+                <option key={c} value={c}>
+                  {t[KIND_KEY[c]]}
+                </option>
+              ))}
+            </select>
+            <span className="shrink-0 text-[11px] text-zinc-500">{t.ghostsShown(visible.length, ghosts.length)}</span>
+          </div>
+          {counts.length > 1 && <KindChips counts={counts} selected={kinds} onChange={setKinds} testId="ghost-kinds" />}
+        </div>
+      )}
+      {ghosts && ghosts.length > 0 && visible.length === 0 && <p className="pt-10 text-center text-sm text-zinc-500">{t.ghostsNoMatch}</p>}
       {selected && ghosts && (
         <div className="grid min-h-0 flex-1 grid-cols-[240px_1fr] gap-3 pb-3">
-          <ul className="space-y-1 overflow-y-auto pr-1">
-            {ghosts.map((g) => (
+          <ul className="space-y-1 overflow-y-auto pr-1" data-testid="ghost-list">
+            {visible.map((g) => (
               <li key={g.id}>
                 <button
                   type="button"

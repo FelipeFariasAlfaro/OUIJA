@@ -1,9 +1,9 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { IPC, type IndexState, type MediumApi, type SetupState } from '@shared/ipc'
+import { IPC, type IndexState, type MediumApi, type SetupState, type UpdateState } from '@shared/ipc'
 
 /** Cada método invoca un canal fijo. La interfaz no puede enviar mensajes a otros canales. */
 const api: MediumApi = {
-  ask: (question) => ipcRenderer.invoke(IPC.ask, question),
+  ask: (question, filters) => ipcRenderer.invoke(IPC.ask, question, filters),
   ghosts: () => ipcRenderer.invoke(IPC.ghosts),
   people: () => ipcRenderer.invoke(IPC.people),
   timeline: (id) => ipcRenderer.invoke(IPC.timeline, id),
@@ -39,6 +39,15 @@ const api: MediumApi = {
   aiSave: (input) => ipcRenderer.invoke(IPC.aiSave, input),
   aiForgetKey: (provider) => ipcRenderer.invoke(IPC.aiForgetKey, provider),
   setupState: () => ipcRenderer.invoke(IPC.setupState),
+  updateState: () => ipcRenderer.invoke(IPC.updateState),
+  updateCheck: () => ipcRenderer.invoke(IPC.updateCheck),
+  updateDownload: () => ipcRenderer.invoke(IPC.updateDownload),
+  updateInstall: () => ipcRenderer.invoke(IPC.updateInstall),
+  onUpdateState: (listener) => {
+    const handler = (_e: unknown, state: UpdateState) => listener(state)
+    ipcRenderer.on(IPC.onUpdateState, handler)
+    return () => ipcRenderer.removeListener(IPC.onUpdateState, handler)
+  },
   setupStart: () => ipcRenderer.invoke(IPC.setupStart),
   setupCancel: () => ipcRenderer.invoke(IPC.setupCancel),
   suggestFolders: () => ipcRenderer.invoke(IPC.suggestFolders),

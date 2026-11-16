@@ -11,3 +11,6 @@ release/
 *.sqlite-shm
 .DS_Store
 # NOTE: do not ignore .kiro/ (hackathon requirement)
+
+# Texts for the Devpost submission (not part of the repo)
+docs/DEVPOST_*.md

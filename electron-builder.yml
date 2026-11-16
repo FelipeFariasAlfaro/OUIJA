@@ -12,6 +12,12 @@ files:
 asarUnpack:
   - '**/node_modules/sqlite-vec*/**'
 icon: resources/icon.png
+# Actualizaciones: electron-updater lee latest.yml / latest-linux.yml del release de GitHub.
+publish:
+  provider: github
+  owner: FelipeFariasAlfaro
+  repo: OUIJA
+  releaseType: release
 linux:
   artifactName: OUIJA-${version}.${ext}
   syncDesktopName: true
