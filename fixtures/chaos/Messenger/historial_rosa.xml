@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type='text/xsl' href='MessageLog.xsl'?>
+<Log FirstSessionID="1" LastSessionID="1">
+<Message Date="12-03-2006" Time="22:15:02" DateTime="2006-03-13T01:15:02.000Z" SessionID="1"><From><User FriendlyName="Rosa ~ la luz de marzo"/></From><To><User FriendlyName="Felipe"/></To><Text Style="font-family:Tahoma; color:#800080; ">¿Terminaste el poema que me prometiste?</Text></Message>
+<Message Date="12-03-2006" Time="22:16:40" DateTime="2006-03-13T01:16:40.000Z" SessionID="1"><From><User FriendlyName="Felipe"/></From><To><User FriendlyName="Rosa ~ la luz de marzo"/></To><Text Style="font-family:Tahoma; ">Casi. Lo guardé en el disquete azul, mañana te lo llevo a Concepción &lt;3</Text></Message>
+<Message Date="12-03-2006" Time="22:17:05" DateTime="2006-03-13T01:17:05.000Z" SessionID="1"><From><User FriendlyName="Rosa ~ la luz de marzo"/></From><To><User FriendlyName="Felipe"/></To><Text Style="font-family:Tahoma; color:#800080; ">No lo pierdas como el de la tesis :P</Text></Message>
+</Log>

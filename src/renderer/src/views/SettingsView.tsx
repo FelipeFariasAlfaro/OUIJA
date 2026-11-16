@@ -8,6 +8,8 @@ import { AI_PROVIDERS, type AiConfig } from '@shared/ai'
 import AiWizard from '../ai/AiWizard'
 import { ProviderLogo } from '../ai/ProviderLogo'
 import { ActionButton } from '../components/ui'
+import ExorcismModal from '../components/ExorcismModal'
+import { AnimatePresence } from 'framer-motion'
 import { useI18n } from '../i18n'
 
 function Card({ title, children }: { title: string; children: ReactNode }) {
@@ -57,6 +59,7 @@ export default function SettingsView({ settings, index, onSettings, onTour }: { 
     return api.onUpdateState(setUpd)
   }, [])
   const [copied, setCopied] = useState(false)
+  const [exorcism, setExorcism] = useState(false)
   const [ollama, setOllama] = useState<OllamaStatus | null>(null)
   const [info, setInfo] = useState<AppInfo | null>(null)
   const [confirmForget, setConfirmForget] = useState(false)
@@ -447,6 +450,18 @@ export default function SettingsView({ settings, index, onSettings, onTour }: { 
           {forgot && <p className="mt-2 text-[12px] text-emerald-300">{t.forgetDone}</p>}
         </div>
       </Card>
+
+      <Card title={t.exorcismTitle}>
+        <p className="text-[13px] text-zinc-400">{t.exorcismText}</p>
+        <button
+          type="button"
+          onClick={() => setExorcism(true)}
+          className="mt-2.5 rounded-md border border-rose-500/50 px-3 py-1 text-xs font-medium text-rose-200 transition-colors hover:bg-rose-500/15 hover:shadow-[0_0_14px_rgba(244,63,94,.4)]"
+        >
+          ✝ {t.exorcismButton}
+        </button>
+      </Card>
+      <AnimatePresence>{exorcism && <ExorcismModal onClose={() => setExorcism(false)} />}</AnimatePresence>
     </div>
   )
 }

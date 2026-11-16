@@ -8,6 +8,8 @@ export interface ExtractResult {
   /** `true` si el texto se recuperó de un formato antiguo, dañado o con codificación corrupta. */
   resurrected: boolean
   method: ExtractMethod
+  /** Programa antiguo que guardó el archivo, si se reconoce (para la Cripta y las "voces"). */
+  origin?: 'msn' | 'mbox' | 'outlook-express'
   warnings: string[]
 }
 

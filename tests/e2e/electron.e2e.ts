@@ -70,7 +70,7 @@ describe('ventana y seguridad', () => {
     }))
     expect(surface).toMatchObject({ require: 'undefined', process: 'undefined', ipc: 'undefined' })
     expect(surface.keys).toEqual(
-      ['addFolder', 'addSuggestedFolder', 'aiConfig', 'aiForgetKey', 'aiListModels', 'aiSave', 'aiValidate', 'appInfo', 'ask', 'bringToPresent', 'cancelIndex', 'decideNames', 'exportFile', 'fileKinds', 'finishOnboarding', 'forgetAll', 'getSettings', 'ghosts', 'indexNow', 'indexState', 'localModels', 'mcpConfig', 'minimize', 'ollamaStatus', 'onChanges', 'onIndexState', 'onSetupState', 'onShown', 'openFile', 'people', 'quit', 'recentChanges', 'removeFolder', 'setSettings', 'setupCancel', 'setupStart', 'setupState', 'showInFolder', 'suggestFolders', 'timeline', 'toggleMaximize', 'updateCheck', 'updateDownload', 'updateInstall', 'updateState', 'onUpdateState', 'trashList', 'trashReveal', 'trashRestore'].sort()
+      ['addFolder', 'addSuggestedFolder', 'aiConfig', 'aiForgetKey', 'aiListModels', 'aiSave', 'aiValidate', 'appInfo', 'ask', 'bringToPresent', 'cancelIndex', 'cryptEpitaph', 'cryptExport', 'cryptFolders', 'cryptOpenOther', 'cryptPortraits', 'cryptReport', 'decideNames', 'exorcise', 'exportFile', 'fileKinds', 'finishOnboarding', 'forgetAll', 'getSettings', 'ghosts', 'indexNow', 'indexState', 'localModels', 'mcpConfig', 'minimize', 'ollamaStatus', 'onChanges', 'onIndexState', 'openLink', 'onSetupState', 'onShown', 'openFile', 'people', 'quit', 'recentChanges', 'removeFolder', 'setSettings', 'setupCancel', 'setupStart', 'setupState', 'showInFolder', 'suggestFolders', 'timeline', 'toggleMaximize', 'updateCheck', 'updateDownload', 'updateInstall', 'updateState', 'onUpdateState', 'trashList', 'trashReveal', 'trashRestore'].sort()
     )
   })
 
@@ -183,7 +183,7 @@ describe('navegación', () => {
 describe('salir', () => {
   it('habla seis idiomas: la interfaz cambia al instante', async () => {
     const tabs = async () => page.evaluate(() => [...document.querySelectorAll('nav button')].map((b) => b.textContent).join(' '))
-    const expected = { pt: 'Invocar Fantasmas Pessoas Forca Ajustes', fr: 'Invoquer Fantômes Personnes Potence Réglages', ja: '召喚 幽霊 人物 絞首台 設定', zh: '召唤 幽灵 人物 绞刑架 设置', en: 'Summon Ghosts People Gallows Settings' }
+    const expected = { pt: 'Invocar Fantasmas Pessoas Cripta Forca Ajustes', fr: 'Invoquer Fantômes Personnes Crypte Potence Réglages', ja: '召喚 幽霊 人物 墓所 絞首台 設定', zh: '召唤 幽灵 人物 墓室 绞刑架 设置', en: 'Summon Ghosts People Crypt Gallows Settings' }
     for (const [lang, text] of Object.entries(expected)) {
       await page.evaluate((l) => (window as unknown as { ouija: { setSettings(p: object): Promise<unknown> } }).ouija.setSettings({ lang: l }), lang)
       await page.reload()
@@ -191,7 +191,29 @@ describe('salir', () => {
     }
     await page.evaluate(() => (window as unknown as { ouija: { setSettings(p: object): Promise<unknown> } }).ouija.setSettings({ lang: 'es' }))
     await page.reload()
-    await expect.poll(tabs).toBe('Invocar Fantasmas Personas Patíbulo Ajustes')
+    await expect.poll(tabs).toBe('Invocar Fantasmas Personas Cripta Patíbulo Ajustes')
+  })
+  it('(?) abre los créditos: autor, correo, repositorio y LinkedIn; solo esos enlaces se pueden abrir', async () => {
+    await page.getByRole('button', { name: 'Acerca de OUIJA' }).click()
+    const about = page.getByTestId('about')
+    await about.waitFor()
+    const text = await about.innerText()
+    for (const s of ['Creado con', 'Kiro AWS', 'Felipe Farías', 'farias3felipe@gmail.com', 'github.com/FelipeFariasAlfaro/OUIJA', 'linkedin.com/in/felipefariasalfaro']) expect(text).toContain(s)
+    await page.waitForTimeout(500)
+    await page.screenshot({ path: '/tmp/about-modal.png' })
+    await app.evaluate(({ shell }) => {
+      const g = globalThis as unknown as { links: string[] }
+      g.links = []
+      shell.openExternal = (async (u: string) => void g.links.push(u)) as typeof shell.openExternal
+    })
+    await about.getByRole('button', { name: /LinkedIn/ }).click()
+    await about.getByRole('button', { name: /farias3felipe/ }).click()
+    await expect.poll(() => app.evaluate(() => (globalThis as unknown as { links: string[] }).links)).toEqual(['https://www.linkedin.com/in/felipefariasalfaro/', 'mailto:farias3felipe@gmail.com'])
+    const blocked = await page.evaluate(() => (window as unknown as { ouija: { openLink(u: string): Promise<void> } }).ouija.openLink('https://evil.example').then(() => 'ok', (e: Error) => e.message))
+    expect(blocked).toMatch(/no permitido/)
+    await page.keyboard.press('Escape')
+    await expect.poll(() => about.count()).toBe(0)
+    expect(await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].isMinimized())).toBe(false)
   })
   it('el botón × cierra OUIJA por completo', async () => {
     const closed = new Promise<void>((ok) => app.process().once('exit', () => ok()))

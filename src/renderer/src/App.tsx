@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { AnimatePresence } from 'framer-motion'
 import type { IndexState, Settings } from '@shared/ipc'
 import { AI_PROVIDERS } from '@shared/ai'
 import { api } from './api'
 import { GhostIcon } from './components/ui'
 import Ambience from './components/Ambience'
+import AboutModal from './components/AboutModal'
 import Tour from './components/Tour'
 import UpdateBanner from './components/UpdateBanner'
 import WindowControls from './components/WindowControls'
 import { I18nContext, makeI18n, type Lang } from './i18n'
+import CryptView from './views/CryptView'
 import GallowsView from './views/GallowsView'
 import GhostsView from './views/GhostsView'
 import PeopleView from './views/PeopleView'
@@ -15,8 +18,8 @@ import Onboarding from './onboarding/Onboarding'
 import SearchView from './views/SearchView'
 import SettingsView from './views/SettingsView'
 
-type View = 'search' | 'ghosts' | 'people' | 'gallows' | 'settings'
-const VIEWS: View[] = ['search', 'ghosts', 'people', 'gallows', 'settings']
+type View = 'search' | 'ghosts' | 'people' | 'crypt' | 'gallows' | 'settings'
+const VIEWS: View[] = ['search', 'ghosts', 'people', 'crypt', 'gallows', 'settings']
 
 const IDLE: IndexState = { phase: 'idle', processed: 0, total: 0, indexed: 0, skipped: 0, errors: 0 }
 
@@ -25,6 +28,11 @@ export default function App() {
   const [settings, setSettings] = useState<Settings | null>(null)
   const [index, setIndex] = useState<IndexState>(IDLE)
   const [touring, setTouring] = useState(false)
+  const [about, setAbout] = useState(false)
+  const [version, setVersion] = useState<string | undefined>()
+  useEffect(() => {
+    void api.appInfo().then((i) => setVersion(i.version)).catch(() => undefined)
+  }, [])
   const lang: Lang = settings?.lang ?? 'es'
   const i18n = useMemo(() => makeI18n(lang), [lang])
   const { t } = i18n
@@ -38,7 +46,7 @@ export default function App() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') api.minimize()
-      if ((e.ctrlKey || e.metaKey) && ['1', '2', '3', '4', '5'].includes(e.key)) {
+      if ((e.ctrlKey || e.metaKey) && ['1', '2', '3', '4', '5', '6'].includes(e.key)) {
         e.preventDefault()
         setView(VIEWS[Number(e.key) - 1])
       }
@@ -71,6 +79,7 @@ export default function App() {
     { id: 'search', label: t.tabSearch },
     { id: 'ghosts', label: t.tabGhosts },
     { id: 'people', label: t.tabPeople },
+    { id: 'crypt', label: t.tabCrypt },
     { id: 'gallows', label: t.tabGallows },
     { id: 'settings', label: t.tabSettings }
   ]
@@ -115,6 +124,15 @@ export default function App() {
               </button>
             ))}
           </nav>
+          <button
+            type="button"
+            onClick={() => setAbout(true)}
+            title={t.aboutHelp}
+            aria-label={t.aboutHelp}
+            className="ml-2 flex h-6 w-6 items-center justify-center rounded-full [-webkit-app-region:no-drag] border border-white/15 text-[11px] font-semibold text-zinc-400 transition-colors hover:border-rose-400/60 hover:text-rose-200 hover:shadow-[0_0_12px_rgba(244,63,94,.45)]"
+          >
+            ?
+          </button>
           <div className="ml-auto flex items-center gap-3">
             {busy && (
               <button type="button" data-tour="progress" onClick={() => setView('settings')} className="flex items-center gap-1.5 rounded-full bg-violet-400/10 px-2 py-0.5 text-[11px] text-violet-200 [-webkit-app-region:no-drag]">
@@ -148,10 +166,12 @@ export default function App() {
         {view === 'search' && <SearchView key={lang} hasFolders={(settings?.folders.length ?? 0) > 0 || index.indexed > 0} onAddFolder={addFolder} changesKey={`${index.phase}-${index.indexed}`} onGallows={() => setView('gallows')} />}
         {view === 'ghosts' && <GhostsView key={`${lang}-${index.phase}`} />}
         {view === 'people' && <PeopleView key={`${lang}-${index.phase}`} />}
+        {view === 'crypt' && <CryptView key={lang} refreshKey={`${index.phase}-${index.indexed}`} indexing={busy} onSettings={() => setView('settings')} />}
         {view === 'gallows' && <GallowsView key={lang} />}
         {view === 'settings' && settings && <SettingsView settings={settings} index={index} onSettings={setSettings} onTour={startTour} />}
 
         {touring && <Tour onDone={endTour} />}
+        <AnimatePresence>{about && <AboutModal version={version} onClose={() => setAbout(false)} />}</AnimatePresence>
 
         <footer className="flex items-center gap-4 border-t border-white/5 px-4 py-2 text-[11px] text-zinc-500">
           <span>

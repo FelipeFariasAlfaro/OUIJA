@@ -8,6 +8,7 @@ import { convertLegacy } from './legacy'
 import { canOcr, ocrImage } from './ocr'
 import { extractPdf } from './pdf'
 import { rtfToText } from './rtf'
+import { dbxToText, looksLikeDbx, looksLikeMsnLog, mboxToText, msnLogToText } from './voices'
 import { ExtractError, type ExtractInput, type ExtractResult } from './types'
 
 export { carveText } from './carve'
@@ -15,6 +16,7 @@ export { decodeBest, repairMojibake, scoreText } from './encoding'
 export { htmlToText } from './formats'
 export { rtfToText } from './rtf'
 export { convertLegacyToModern } from './legacy'
+export { exifDate } from './exif'
 export { ExtractError } from './types'
 export type { ExtractInput, ExtractMethod, ExtractResult } from './types'
 
@@ -30,7 +32,7 @@ export const LEGACY_EXTENSIONS = ['doc', 'dot', 'wpd', 'wps', 'wri', 'ws', 'lwp'
 export const SHEET_LEGACY_EXTENSIONS = ['xls', 'xlsb'] as const
 const SHEET_LEGACY: string[] = [...SHEET_LEGACY_EXTENSIONS]
 const OFFICE_XML = ['docx', 'dotx', 'xlsx', 'xlsm', 'pptx', 'ppsx', 'odt', 'ods', 'odp', 'epub']
-const OTHER = ['pdf', 'rtf', 'html', 'htm', 'xhtml', 'mhtml', 'svg', 'eml']
+const OTHER = ['pdf', 'rtf', 'html', 'htm', 'xhtml', 'mhtml', 'svg', 'eml', 'mbox', 'dbx']
 
 /** Extensiones de las que se extrae contenido (las demás se conocen solo por nombre y metadatos). */
 export const SUPPORTED_EXTENSIONS: readonly string[] = [...new Set([...TEXT_EXTENSIONS, ...LEGACY_EXTENSIONS, ...SHEET_LEGACY, ...OFFICE_XML, ...OTHER])]
@@ -123,6 +125,20 @@ export async function extractText(input: ExtractInput, options: ExtractOptions =
 
   if (ext === 'svg') return finish(ok(svgToText(decodeBest(buf).text), 'text'))
   if (['html', 'htm', 'xhtml', 'mhtml'].includes(ext)) return finish(ok(htmlToText(decodeBest(buf).text), 'text'))
+  if (ext === 'mbox') return finish({ ...ok(mboxToText(buf), 'text'), origin: 'mbox' })
+  if (ext === 'dbx') {
+    if (!looksLikeDbx(buf)) throw new ExtractError('No parece una carpeta de Outlook Express')
+    const r = dbxToText(buf)
+    if (!r) throw new ExtractError('No se pudo recuperar texto de la carpeta de Outlook Express')
+    return finish({ text: r.text, confidence: r.confidence, resurrected: true, method: 'carve', origin: 'outlook-express', warnings: ['Mensajes rescatados de una carpeta de Outlook Express'] })
+  }
+  if (ext === 'xml') {
+    const decoded = decodeBest(buf)
+    if (looksLikeMsnLog(decoded.text.slice(0, 4000))) {
+      const text = msnLogToText(decoded.text)
+      if (text) return finish({ text, confidence: 'high', resurrected: true, method: 'text', origin: 'msn', warnings: ['Historial de MSN Messenger'] })
+    }
+  }
   if (TEXT.has(ext)) {
     const decoded = decodeBest(buf)
     const warnings = decoded.repaired ? ['Se corrigió texto con codificación dañada (mojibake)'] : []

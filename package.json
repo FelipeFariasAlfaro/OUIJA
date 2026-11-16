@@ -1,6 +1,6 @@
 {
   "name": "ouija",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "OUIJA: arqueología digital personal. Resucita archivos, busca por significado y encuentra fantasmas digitales. Todo local.",
   "license": "MIT",
   "private": true,
@@ -14,7 +14,8 @@
     "test": "vitest",
     "package": "npm run build && electron-builder --publish never",
     "e2e": "npm run build && vitest --run --config vitest.e2e.config.ts",
-    "icons": "node scripts/make-icons.mjs"
+    "icons": "node scripts/make-icons.mjs",
+    "autopsy": "vitest --run --config vitest.autopsy.config.ts"
   },
   "dependencies": {
     "chokidar": "^6.0.0",

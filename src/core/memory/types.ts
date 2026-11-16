@@ -16,6 +16,8 @@ export interface IndexedDoc {
   confidence?: Confidence
   resurrected?: boolean
   error?: string
+  /** Programa antiguo que lo guardó (`msn`, `mbox`, `outlook-express`), si se reconoce. */
+  origin?: string
 }
 
 export interface Chunk {

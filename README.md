@@ -13,13 +13,15 @@ OUIJA resurrects that idea and reimagines it with what was impossible in 2011:
 | Google Desktop (2004–2011) | OUIJA (2026) |
 |---|---|
 | Keyword search | Search by **meaning**, in your own words, with local embeddings |
-| Indexed modern files only | **Resurrects dead formats**: WordPerfect, WordStar, Works, Write, Lotus, DOS text (CP437/CP850), broken encodings |
+| Indexed modern files only | **Resurrects dead formats**: WordPerfect, WordStar, Works, Write, Lotus, DOS text (CP437/CP850), broken encodings, **MSN Messenger** chats, **Outlook Express** folders, `.mbox` mailboxes |
 | Stopped at the ZIP | Looks **inside backups** (ZIP; 7z, RAR, ARJ, LZH with 7-Zip) |
 | "Search Across Computers" copied your index to Google's servers | **Everything local**: no cloud, no telemetry |
 | A list of links | An answer that cites only files that exist, plus **ghosts**, **people** and **timelines** |
 | Dead in 2011 | Open to **AI agents** through MCP |
 
-And it resurrects files in three more ways:
+And it resurrects what those files meant:
+
+- **The Crypt.** Open someone's digital inheritance (the PC of a parent who is gone, an old disk, the family backups) and OUIJA arranges it into a **grimoire of memories**: the years, the souls that appear in it, portraits dated by their EXIF, the *voices from beyond* (old chats and emails), what came back from dead formats, and an epitaph written only from what the files say. Export it as a PDF to keep or share.
 
 - **Bring to the present:** a 1994 WordPerfect thesis comes back as a `.docx` (or clean UTF-8 Markdown when the file is too damaged), saved where you choose. The original is never touched.
 - **The Gallows:** what you sent to the trash, with what OUIJA knew about it. From *Resurrection* you bring it back to its original place, never overwriting anything (Linux and Windows).
@@ -31,9 +33,18 @@ And it resurrects files in three more ways:
 2. **Resurrection of dead formats.** LibreOffice conversion when available; otherwise forensic rescue from the raw bytes, encoding detection (CP437, CP850, Latin-1) and mojibake repair ("Ã±" → "ñ").
 3. **Every file type is findable** by name, folder and type (images, audio, video, code…); small images are read with OCR.
 4. **Ghost autopsy**, **People / Specters** with timelines (merge "Rosita" with "Rosa"), and **live change detection**.
-5. **MCP server.** Kiro, Claude Desktop or any MCP agent can ask OUIJA where your files are and read the ones it resurrected. Settings shows the configuration ready to paste.
-6. **Six languages:** Spanish, English, Portuguese, French, Japanese and Chinese.
-7. **A haunted interface** that serves the function: séance metaphor, storm and ghosts on the welcome screen, subtle fog and distant lightning in the app, and a guided tour.
+5. **Voices from beyond.** MSN Messenger history (2006) becomes a readable conversation; Outlook Express `.dbx` folders and `.mbox` mailboxes are rescued; photos are dated by when they were taken (EXIF), not when they were copied.
+6. **The Crypt** and its exportable **grimoire** (PDF).
+7. **MCP server.** Kiro, Claude Desktop or any MCP agent can ask OUIJA where your files are and read the ones it resurrected. Settings shows the configuration ready to paste.
+8. **Six languages:** Spanish, English, Portuguese, French, Japanese and Chinese.
+9. **A haunted interface** that serves the function: séance metaphor, storm and ghosts on the welcome screen, subtle fog and distant lightning in the app, and a guided tour.
+
+## Autopsy report
+
+Measured on the demo folder with `npm run autopsy` ([full report](docs/AUTOPSY.md)):
+
+- **7 of 7** dead or damaged files come back with their text; opened as plain text, only 3 of them show it.
+- Finding files from what you remember, 12 questions in Spanish and English: **Recall@5 100%** and **MRR 0.96** with meaning + keywords, against 92% and 0.81 with keywords only.
 
 ## Privacy
 
@@ -73,7 +84,7 @@ OUIJA ships a read-only [Model Context Protocol](https://modelcontextprotocol.io
 ```json
 {
   "mcpServers": {
-    "ouija": { "command": "/path/to/OUIJA-0.4.0.AppImage", "args": ["--mcp"] }
+    "ouija": { "command": "/path/to/OUIJA-0.5.0.AppImage", "args": ["--mcp"] }
   }
 }
 ```

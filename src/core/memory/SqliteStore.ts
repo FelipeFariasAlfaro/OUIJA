@@ -17,7 +17,8 @@ export interface SqliteStoreOptions {
  * y hay fragmentos de metadatos), el índice anterior se descarta y se rehace, conservando las
  * decisiones manuales sobre nombres.
  */
-export const INDEX_VERSION = 2
+/** 3: historiales de MSN, correo antiguo, fecha EXIF de las fotos y columna `origin` (se reindexa todo). */
+export const INDEX_VERSION = 3
 
 const RRF_K = 60
 const DEFAULT_LIMIT = 10
@@ -105,6 +106,7 @@ export class SqliteStore implements MemoryStore, EntityStore {
     if (!chunkColumns.some((c) => c.name === 'meta')) this.db.exec('alter table chunks add column meta integer not null default 0')
     if (!columns.some((c) => c.name === 'ocr_hash')) this.db.exec('alter table files add column ocr_hash text')
     if (!columns.some((c) => c.name === 'entities_hash')) this.db.exec('alter table files add column entities_hash text')
+    if (!columns.some((c) => c.name === 'origin')) this.db.exec('alter table files add column origin text')
 
     const stored = this.db.prepare("select value from meta where key = 'dimensions'").get() as
       | Row
@@ -178,16 +180,17 @@ export class SqliteStore implements MemoryStore, EntityStore {
         doc.container ?? null,
         doc.confidence ?? null,
         doc.resurrected ? 1 : 0,
-        doc.error ?? null
+        doc.error ?? null,
+        doc.origin ?? null
       ]
       this.db
         .prepare(
-          `insert into files(path, hash, size, mtime, atime, born, ext, summary, container, confidence, resurrected, error)
-           values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `insert into files(path, hash, size, mtime, atime, born, ext, summary, container, confidence, resurrected, error, origin)
+           values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
            on conflict(path) do update set
              hash = excluded.hash, size = excluded.size, mtime = excluded.mtime, atime = excluded.atime, born = excluded.born,
              ext = excluded.ext, summary = excluded.summary, container = excluded.container,
-             confidence = excluded.confidence, resurrected = excluded.resurrected, error = excluded.error`
+             confidence = excluded.confidence, resurrected = excluded.resurrected, error = excluded.error, origin = excluded.origin`
         )
         .run(...params)
 
@@ -526,5 +529,6 @@ function rowToDoc(row: Row): IndexedDoc {
   if (row.confidence !== null && row.confidence !== undefined) doc.confidence = row.confidence as Confidence
   if (row.resurrected === 1) doc.resurrected = true
   if (row.error !== null && row.error !== undefined) doc.error = row.error as string
+  if (row.origin !== null && row.origin !== undefined) doc.origin = row.origin as string
   return doc
 }

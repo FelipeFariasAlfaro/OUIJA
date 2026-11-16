@@ -8,6 +8,7 @@ import { OuijaCore } from './core/ouija'
 import { SecretStore } from './core/secrets'
 import { SettingsStore } from './core/settings'
 import { registerIpc } from './ipc'
+import { runPendingExorcism } from './purge'
 import { existingDataDir, prepareDataDir, resolveDataDir } from './dataDir'
 import { Updater } from './updater'
 import { runMcp } from './mcp/run'
@@ -23,6 +24,8 @@ if (process.platform === 'linux' && process.env['XDG_SESSION_TYPE'] === 'wayland
 if (process.env['OUIJA_USER_DATA']) app.setPath('userData', process.env['OUIJA_USER_DATA']) // pruebas
 else if (!process.argv.includes('--mcp')) app.setPath('userData', prepareDataDir(app.getPath('appData')))
 else app.setPath('userData', existingDataDir(app.getPath('appData')))
+// Un exorcismo pedido en la sesión anterior: la carpeta de datos queda limpia antes de usarla.
+if (!process.argv.includes('--mcp')) runPendingExorcism(app.getPath('userData'))
 
 
 // `ouija --mcp`: servidor MCP por stdio para agentes (Kiro, Claude Desktop…), sin ventana. Convive con la

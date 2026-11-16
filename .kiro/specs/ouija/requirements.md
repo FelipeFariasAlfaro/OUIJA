@@ -140,6 +140,18 @@ OUIJA is a desktop app (Windows and Linux) for personal digital archaeology. It 
 1. THE answer model SHALL be any chat model installed in Ollama or served on this computer by an OpenAI-compatible server, chosen in Settings, or the best installed one when set to Automatic.
 2. THE system SHALL accept local model servers only on localhost.
 
+### R19. The Crypt (digital inheritance)
+1. THE system SHALL present a handed-over folder as a crypt: files per year, people, places, portraits, voices, resurrected files and ghosts, using only index data.
+2. THE epitaph SHALL be written by the language model only from the crypt data, following the same privacy rules as summaries; without a model, a template SHALL be used.
+3. THE user SHALL be able to export the crypt as a PDF grimoire, rendered in an isolated window without scripts or network.
+
+### R20. Voices from beyond
+1. THE system SHALL read MSN Messenger history, Outlook Express `.dbx` folders and `.mbox` mailboxes, marking the first two as resurrected.
+2. THE date of a photo SHALL be the EXIF date when it is older than the file dates.
+
+### R21. Autopsy report
+1. THE project SHALL include a reproducible benchmark on the demo folder that measures recovered dead formats, recall@1, recall@5 and MRR, with and without semantic search.
+
 ## Verifiable properties (PBT)
 
 - P1: every path cited in an answer exists in the index.

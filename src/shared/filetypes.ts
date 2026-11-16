@@ -30,7 +30,7 @@ const TABLE: Record<Exclude<FileKind, 'other'>, string> = {
   data: 'json xml yaml yml toml ini cfg conf properties rels env plist',
   web: 'html htm xhtml mhtml',
   ebook: 'epub mobi azw azw3 djvu',
-  email: 'eml msg mbox',
+  email: 'eml msg mbox dbx',
   image: 'jpg jpeg png gif webp bmp svg tif tiff heic heif avif ico raw cr2 nef dng xcf',
   design: 'psd ai xd fig sketch drawio eps indd dwg dxf',
   audio: 'mp3 wav flac ogg m4a aac wma opus mid midi aiff',

@@ -2,6 +2,20 @@
 
 All notable changes to OUIJA. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.5.0] - 2026-11-16
+
+### Changed
+- The index is rebuilt once after updating (new readers and dates).
+
+### Added
+- **The Crypt** tab: open someone's digital inheritance (a folder, an old disk, a backup) and read it as a grimoire of memories: years, souls, portraits, voices, resurrected files and an epitaph written only from the index. Export the grimoire as PDF.
+- A **(?)** guide in the Crypt explains each step with its real status (folder handed over, files read, souls recognized, model for the epitaph) and a button to fix what is missing.
+- **Voices from beyond:** MSN Messenger history (XML), Outlook Express `.dbx` folders and `.mbox` mailboxes are read and searchable.
+- Photos are dated by their EXIF date (when they were taken), not when they were copied.
+- **Autopsy report:** `npm run autopsy` measures resurrection and search quality on the demo folder and writes `docs/AUTOPSY.md`.
+- **Exorcism** (last card in Settings): erase all of OUIJA's data and reopen from the welcome screen, after a confirmation; optionally keep the AI engine and models. Your files are never touched.
+- **About** button (?) next to the tabs: a sinister credits modal with embers, red fog and a tombstone, with the author, email, repository and LinkedIn. Only those links can be opened.
+
 ## [0.4.0] - 2026-11-16
 
 ### Added
@@ -51,6 +65,7 @@ All notable changes to OUIJA. The format follows [Keep a Changelog](https://keep
 - Onboarding with automatic setup of Ollama and the models.
 - Linux (AppImage, deb) and Windows (NSIS) installers built on every push to `main`.
 
+[0.5.0]: https://github.com/FelipeFariasAlfaro/OUIJA/releases/tag/v0.5.0
 [0.4.0]: https://github.com/FelipeFariasAlfaro/OUIJA/releases/tag/v0.4.0
 [0.3.0]: https://github.com/FelipeFariasAlfaro/OUIJA/releases/tag/v0.3.0
 [0.2.0]: https://github.com/FelipeFariasAlfaro/OUIJA/releases/tag/v0.2.0

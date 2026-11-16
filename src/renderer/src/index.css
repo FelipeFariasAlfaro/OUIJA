@@ -111,3 +111,88 @@ body,
   .ambience-fog { animation: none; }
   .ambience-flash, .ambience-ghost { display: none; }
 }
+
+/* --- Acerca de -------------------------------------------------------------- */
+.about-card {
+  box-shadow: 0 0 0 1px rgba(244, 63, 94, 0.15), 0 0 60px rgba(244, 63, 94, 0.25), inset 0 0 80px rgba(76, 29, 149, 0.35);
+  animation: about-pulse 4s ease-in-out infinite;
+}
+@keyframes about-pulse {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(244, 63, 94, 0.15), 0 0 50px rgba(244, 63, 94, 0.2), inset 0 0 80px rgba(76, 29, 149, 0.35); }
+  50% { box-shadow: 0 0 0 1px rgba(244, 63, 94, 0.3), 0 0 80px rgba(244, 63, 94, 0.38), inset 0 0 90px rgba(76, 29, 149, 0.5); }
+}
+/* El título parpadea como una vela que se apaga. */
+.about-title {
+  text-shadow: 0 0 14px rgba(244, 63, 94, 0.8), 0 0 32px rgba(139, 92, 246, 0.6);
+  animation: about-flicker 5s linear infinite;
+}
+@keyframes about-flicker {
+  0%, 18%, 22%, 25%, 53%, 57%, 100% { opacity: 1; }
+  20%, 24%, 55% { opacity: 0.35; }
+}
+.about-author {
+  font-family: Georgia, 'Times New Roman', serif;
+  text-shadow: 0 0 12px rgba(167, 139, 250, 0.55);
+}
+.about-fog {
+  background:
+    radial-gradient(40% 70% at 25% 60%, rgba(127, 29, 29, 0.45), transparent 70%),
+    radial-gradient(45% 70% at 70% 70%, rgba(76, 29, 149, 0.4), transparent 70%);
+  filter: blur(20px);
+  animation: storm-drift 18s ease-in-out infinite alternate;
+}
+.about-ember {
+  background: radial-gradient(circle, #fecdd3, #f43f5e 60%, transparent 70%);
+  box-shadow: 0 0 6px #f43f5e;
+  animation-name: about-rise;
+  animation-timing-function: ease-in;
+  animation-iteration-count: infinite;
+}
+@keyframes about-rise {
+  0% { transform: translate(0, 0); opacity: 0; }
+  10% { opacity: 0.9; }
+  100% { transform: translate(18px, -420px); opacity: 0; }
+}
+.about-tomb {
+  filter: drop-shadow(0 0 18px rgba(167, 139, 250, 0.35));
+  animation: about-tomb 7s ease-in-out infinite;
+}
+@keyframes about-tomb {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 0.6; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .about-card, .about-title, .about-fog, .about-ember, .about-tomb { animation: none; }
+  .about-ember { display: none; }
+}
+
+/* --- Cripta --------------------------------------------------------------- */
+.crypt-hero {
+  background:
+    radial-gradient(120% 140% at 100% 0%, rgba(139, 92, 246, 0.22), transparent 55%),
+    radial-gradient(90% 120% at 0% 100%, rgba(127, 29, 29, 0.18), transparent 60%),
+    rgba(10, 8, 18, 0.7);
+  box-shadow: inset 0 0 40px rgba(76, 29, 149, 0.25);
+}
+/* Una vela que titila detrás del epitafio. */
+.crypt-hero::after {
+  content: '';
+  position: absolute;
+  right: 18px;
+  bottom: 14px;
+  width: 70px;
+  height: 70px;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgba(251, 191, 36, 0.28), transparent 70%);
+  animation: crypt-candle 3.2s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes crypt-candle {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  40% { opacity: 0.9; transform: scale(1.08); }
+  60% { opacity: 0.65; transform: scale(0.96); }
+}
+.crypt-portrait img { filter: sepia(0.35) contrast(1.05); }
+@media (prefers-reduced-motion: reduce) {
+  .crypt-hero::after { animation: none; }
+}

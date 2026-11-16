@@ -3,7 +3,7 @@ import { basename, resolve, sep } from 'node:path'
 import { extensionOf as extOf, isIgnoredFile, kindOf, type FileKind } from '@shared/filetypes'
 import { OllamaError } from '../ai/ollama'
 import { hashFileQuiet, readFileQuiet } from '../fsQuiet'
-import { extractText as defaultExtract, isSupportedExtension, type ExtractInput, type ExtractOptions, type ExtractResult } from '../extract'
+import { exifDate, extractText as defaultExtract, isSupportedExtension, type ExtractInput, type ExtractOptions, type ExtractResult } from '../extract'
 import { isContainerPath, isVirtualPath, makeVPath, openContainer, parseVPath } from '../media'
 import type { Chunk, Confidence, IndexedDoc } from '../memory'
 import type { MemoryStore } from '../memory'
@@ -67,6 +67,7 @@ const MAX_CONTENT_CHUNKS: Partial<Record<FileKind, number>> = { code: 3, data: 3
 const MAX_CONTAINER_ENTRIES = 5000
 
 function contentReadLimit(kind: FileKind, ext: string, size: number): number | null {
+  if (ext === 'xml') return READ_LIMIT_TEXT // los historiales de MSN Messenger son XML y pueden ser largos
   if (kind === 'code' || kind === 'data') return READ_LIMIT_CODE
   if (kind === 'text' || kind === 'web' || ext === 'csv' || ext === 'tsv' || ext === 'eml') return READ_LIMIT_TEXT
   if (kind === 'image') return null // el texto de las imágenes se lee aparte, en segundo plano
@@ -299,6 +300,11 @@ export class IndexPipeline {
       ext,
       container: args.container
     }
+    // Fotos: la fecha en que se tomaron (EXIF) vale más que la de la copia.
+    if (ext === 'jpg' || ext === 'jpeg') {
+      const taken = exifDate(await args.read(128 * 1024).catch(() => Buffer.alloc(0)))
+      if (taken !== undefined && taken < base.born!) base.born = taken
+    }
 
     // 1. Contenido, si se sabe leer este tipo. Todo lo demás se conoce por nombre, carpeta y tipo.
     let result: ExtractResult | undefined
@@ -324,7 +330,8 @@ export class IndexPipeline {
 
     // 2. Fragmentos: metadatos primero y luego el contenido, con un tope según el tipo.
     const metaText = buildMetaText(args.path, args.size)
-    const pieces = result ? chunkText(result.text, { maxChunks: MAX_CONTENT_CHUNKS[kind], ...this.chunking }) : []
+    // Conversaciones y correos rescatados se leen enteros, aunque vengan en un formato de datos (XML).
+    const pieces = result ? chunkText(result.text, { maxChunks: result.origin ? undefined : MAX_CONTENT_CHUNKS[kind], ...this.chunking }) : []
     let vectors: Float32Array[]
     try {
       vectors = await this.embedder.embed([metaText, ...pieces])
@@ -352,6 +359,7 @@ export class IndexPipeline {
         summary,
         error,
         resurrected: result ? result.resurrected || recovered : recovered || undefined,
+        origin: result?.origin,
         confidence: result ? (recovered ? capConfidence(result.confidence, 'medium') : result.confidence) : undefined
       },
       chunks

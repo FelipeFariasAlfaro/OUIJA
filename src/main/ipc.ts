@@ -1,23 +1,27 @@
-import { app, dialog, ipcMain, shell, type IpcMainEvent, type IpcMainInvokeEvent } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, session, shell, type IpcMainEvent, type IpcMainInvokeEvent } from 'electron'
+import { writeFile } from 'node:fs/promises'
+import { sep } from 'node:path'
 import type { AiSaveInput } from '@shared/ai'
 import { IPC, type AskFilters, type AppInfo, type ExportResult, type PresentResult, type Settings } from '@shared/ipc'
 import type { Lang } from '@shared/langs'
+import { ABOUT_LINKS } from '@shared/about'
 import { ALL_KINDS, type FileKind } from '@shared/filetypes'
 import type { OuijaCore } from './core/ouija'
 import type { Updater } from './updater'
+import { requestExorcism } from './purge'
 import { suggestFolders } from './core/setup'
 import { AI_PROVIDER_IDS } from '@shared/ai'
 import { asOneOf, asString, isTrustedSender } from './security'
 import type { PaletteWindow } from './window'
 
 /** Botón de los diálogos del sistema, en el idioma de la interfaz. */
-const DIALOG: Record<Lang, { save: string; add: string; resurrect: string; present: string }> = {
-  es: { save: 'Guardar aquí', add: 'Entregar a OUIJA', resurrect: 'Resucitar aquí', present: 'Traer aquí' },
-  en: { save: 'Save here', add: 'Add to OUIJA', resurrect: 'Resurrect here', present: 'Bring it here' },
-  pt: { save: 'Salvar aqui', add: 'Entregar ao OUIJA', resurrect: 'Ressuscitar aqui', present: 'Trazer para cá' },
-  fr: { save: 'Enregistrer ici', add: 'Confier à OUIJA', resurrect: 'Ressusciter ici', present: 'Ramener ici' },
-  ja: { save: 'ここに保存', add: 'OUIJA に渡す', resurrect: 'ここに復活', present: 'ここに持ってくる' },
-  zh: { save: '保存到这里', add: '交给 OUIJA', resurrect: '在此复活', present: '带到这里' }
+const DIALOG: Record<Lang, { save: string; add: string; resurrect: string; present: string; crypt: string }> = {
+  es: { save: 'Guardar aquí', add: 'Entregar a OUIJA', resurrect: 'Resucitar aquí', present: 'Traer aquí', crypt: 'Abrir esta cripta' },
+  en: { save: 'Save here', add: 'Add to OUIJA', resurrect: 'Resurrect here', present: 'Bring it here', crypt: 'Open this crypt' },
+  pt: { save: 'Salvar aqui', add: 'Entregar ao OUIJA', resurrect: 'Ressuscitar aqui', present: 'Trazer para cá', crypt: 'Abrir esta cripta' },
+  fr: { save: 'Enregistrer ici', add: 'Confier à OUIJA', resurrect: 'Ressusciter ici', present: 'Ramener ici', crypt: 'Ouvrir cette crypte' },
+  ja: { save: 'ここに保存', add: 'OUIJA に渡す', resurrect: 'ここに復活', present: 'ここに持ってくる', crypt: 'この墓所を開く' },
+  zh: { save: '保存到这里', add: '交给 OUIJA', resurrect: '在此复活', present: '带到这里', crypt: '打开这座墓室' }
 }
 
 /** Valida los filtros de búsqueda que llegan de la interfaz: lo que no se reconoce se descarta. */
@@ -31,6 +35,22 @@ function asFilters(raw: unknown): AskFilters | undefined {
   if (date(o.dateFrom) !== undefined) out.dateFrom = date(o.dateFrom)
   if (date(o.dateTo) !== undefined) out.dateTo = date(o.dateTo)
   return Object.keys(out).length > 0 ? out : undefined
+}
+
+/**
+ * Imprime el grimorio a PDF en una ventana oculta, aislada (sin JavaScript, sin preload, sin red): el HTML
+ * lo arma la interfaz con datos del índice, pero se trata como no confiable.
+ */
+async function renderPdf(html: string): Promise<Buffer> {
+  const ses = session.fromPartition('ouija-grimoire')
+  ses.webRequest.onBeforeRequest({ urls: ['<all_urls>'] }, (details, cb) => cb({ cancel: !details.url.startsWith('data:') }))
+  const win = new BrowserWindow({ show: false, width: 900, height: 1200, webPreferences: { javascript: false, sandbox: true, session: ses, contextIsolation: true, nodeIntegration: false } })
+  try {
+    await win.loadURL(`data:text/html;charset=utf-8;base64,${Buffer.from(html, 'utf8').toString('base64')}`)
+    return await win.webContents.printToPDF({ printBackground: true, pageSize: 'A4', margins: { top: 0, bottom: 0, left: 0, right: 0 } })
+  } finally {
+    win.destroy()
+  }
 }
 
 export interface IpcContext {
@@ -104,6 +124,17 @@ export function registerIpc(ctx: IpcContext): void {
     return r
   })
   handle(IPC.mcpConfig, () => ctx.mcpConfig())
+  handle(IPC.exorcise, async (_e, keepEngine) => {
+    requestExorcism(app.getPath('userData'), keepEngine !== false)
+    await core.close().catch(() => undefined)
+    app.relaunch()
+    app.exit(0)
+  })
+  handle(IPC.openLink, async (_e, url) => {
+    const link = asString(url, 'enlace', 300)
+    if (!ABOUT_LINKS.includes(link)) throw new Error('Enlace no permitido')
+    await shell.openExternal(link)
+  })
 
   handle(IPC.getSettings, () => ctx.getSettings())
   handle(IPC.setSettings, async (_e, patch) => {
@@ -137,6 +168,37 @@ export function registerIpc(ctx: IpcContext): void {
 
   handle(IPC.fileKinds, () => core.fileKinds())
   handle(IPC.localModels, () => core.localModels())
+  handle(IPC.cryptFolders, () => ctx.getSettings().folders)
+  handle(IPC.cryptReport, (_e, folder) => core.crypt(asString(folder, 'carpeta')))
+  handle(IPC.cryptEpitaph, (_e, folder) => core.cryptEpitaph(asString(folder, 'carpeta')))
+  handle(IPC.cryptPortraits, (_e, folder) => core.cryptPortraits(asString(folder, 'carpeta')))
+  handle(IPC.cryptOpenOther, async () => {
+    const chosen = await palette.withoutHiding(() =>
+      dialog.showOpenDialog(palette.win, { properties: ['openDirectory'], buttonLabel: DIALOG[ctx.getSettings().lang].crypt })
+    )
+    if (chosen.canceled || chosen.filePaths.length === 0) return null
+    const folder = chosen.filePaths[0]
+    const covered = ctx.getSettings().folders.some((f) => folder === f || folder.startsWith(f.endsWith(sep) ? f : f + sep))
+    if (!covered) {
+      const before = ctx.getSettings()
+      const after = await core.addFolder(folder)
+      ctx.onSettingsChanged(after, before)
+      void core.indexNow()
+    }
+    return folder
+  })
+  handle(IPC.cryptExport, async (_e, html, name) => {
+    const doc = asString(html, 'grimorio', 40 * 1024 * 1024)
+    const base = asString(name, 'nombre', 120).replace(/[\\/:*?"<>|]+/g, ' ').trim() || 'OUIJA'
+    const chosen = await palette.withoutHiding(() =>
+      dialog.showSaveDialog(palette.win, { defaultPath: `${base}.pdf`, filters: [{ name: 'PDF', extensions: ['pdf'] }] })
+    )
+    if (chosen.canceled || !chosen.filePath) return null
+    const pdf = await renderPdf(doc)
+    await writeFile(chosen.filePath, pdf)
+    shell.showItemInFolder(chosen.filePath)
+    return chosen.filePath
+  })
   handle(IPC.recentChanges, (_e, limit) => core.recentChanges(typeof limit === 'number' ? limit : 30))
   handle(IPC.trashList, () => core.trashOverview())
   handle(IPC.trashRestore, async (_e, ids, destination) => {

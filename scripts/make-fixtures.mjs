@@ -53,6 +53,66 @@ function zip(items) {
   return Buffer.concat([...parts, dir, end])
 }
 
+// JPEG mínimo con EXIF: la foto se tomó en `taken` ("AAAA:MM:DD HH:MM:SS"), aunque el archivo sea una copia posterior.
+function jpegWithExif(taken) {
+  const tiff = Buffer.alloc(8 + 2 + 12 + 4 + 2 + 12 + 4 + 20)
+  tiff.write('II', 0, 'latin1')
+  tiff.writeUInt16LE(42, 2)
+  tiff.writeUInt32LE(8, 4) // IFD0
+  tiff.writeUInt16LE(1, 8)
+  tiff.writeUInt16LE(0x8769, 10) // puntero al IFD de EXIF
+  tiff.writeUInt16LE(4, 12)
+  tiff.writeUInt32LE(1, 14)
+  tiff.writeUInt32LE(26, 18)
+  tiff.writeUInt32LE(0, 22)
+  tiff.writeUInt16LE(1, 26) // IFD de EXIF
+  tiff.writeUInt16LE(0x9003, 28) // DateTimeOriginal
+  tiff.writeUInt16LE(2, 30)
+  tiff.writeUInt32LE(20, 32)
+  tiff.writeUInt32LE(44, 36)
+  tiff.writeUInt32LE(0, 40)
+  tiff.write(`${taken}\0`, 44, 'latin1')
+  const app1 = Buffer.concat([Buffer.from('Exif\0\0', 'latin1'), tiff])
+  const len = Buffer.alloc(2)
+  len.writeUInt16BE(app1.length + 2)
+  return Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe1]), len, app1, Buffer.from([0xff, 0xd9])])
+}
+// Historial de MSN Messenger (2006), tal como lo guardaba Messenger.
+const MSN = `<?xml version="1.0"?>
+<?xml-stylesheet type='text/xsl' href='MessageLog.xsl'?>
+<Log FirstSessionID="1" LastSessionID="1">
+<Message Date="12-03-2006" Time="22:15:02" DateTime="2006-03-13T01:15:02.000Z" SessionID="1"><From><User FriendlyName="Rosa ~ la luz de marzo"/></From><To><User FriendlyName="Felipe"/></To><Text Style="font-family:Tahoma; color:#800080; ">¿Terminaste el poema que me prometiste?</Text></Message>
+<Message Date="12-03-2006" Time="22:16:40" DateTime="2006-03-13T01:16:40.000Z" SessionID="1"><From><User FriendlyName="Felipe"/></From><To><User FriendlyName="Rosa ~ la luz de marzo"/></To><Text Style="font-family:Tahoma; ">Casi. Lo guardé en el disquete azul, mañana te lo llevo a Concepción &lt;3</Text></Message>
+<Message Date="12-03-2006" Time="22:17:05" DateTime="2006-03-13T01:17:05.000Z" SessionID="1"><From><User FriendlyName="Rosa ~ la luz de marzo"/></From><To><User FriendlyName="Felipe"/></To><Text Style="font-family:Tahoma; color:#800080; ">No lo pierdas como el de la tesis :P</Text></Message>
+</Log>
+`
+// Buzón .mbox (2009): dos correos.
+const MBOX = `From mamá Tue Sep 15 10:20:00 2009
+From: Carmen Alfaro <carmen@correo.cl>
+To: Felipe <felipe@correo.cl>
+Subject: La receta de la abuela
+Date: Tue, 15 Sep 2009 10:20:00 -0300
+
+Hijo, aquí va la receta de los alfajores de la abuela Elena: maicena, manjar y mucho cariño.
+Guárdala bien, que es la única copia que queda.
+
+From felipe Wed Sep 16 08:00:00 2009
+From: Felipe <felipe@correo.cl>
+To: Carmen Alfaro <carmen@correo.cl>
+Subject: Re: La receta de la abuela
+Date: Wed, 16 Sep 2009 08:00:00 -0300
+
+Gracias mamá, la imprimo y la pego en el refrigerador.
+`
+// Carpeta de Outlook Express (2004): cabecera binaria y mensajes guardados en bloques.
+const DBX = Buffer.concat([
+  Buffer.from([0xcf, 0xad, 0x12, 0xfe, 0xc5, 0xfd, 0x74, 0x6f]),
+  Buffer.alloc(120),
+  Buffer.from('From: Profesor Salinas <salinas@uv.cl>\r\nSubject: Correcciones de la tesis\r\n\r\nEstimado Felipe: revisé el capítulo tres de la tesis. Faltan las referencias de Valparaíso y el agradecimiento a Rosa Campos.\r\n', 'latin1'),
+  Buffer.alloc(64, 0x01),
+  Buffer.from('From: Rosa Campos <rosa@correo.cl>\r\nSubject: Viaje a Cusco\r\n\r\nYa compré los pasajes para Cusco en agosto. Lleva la cámara nueva.\r\n', 'latin1'),
+  Buffer.alloc(200)
+])
 // PNG de 1×1 píxel válido.
 const PNG = Buffer.from('89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d4944415478da63fcffff3f0005fe02fea75b0a7d0000000049454e44ae426082', 'hex')
 
@@ -70,6 +130,11 @@ const files = [
   ['2020-07-01', 'Cocina/receta_torta.txt', 'Receta de torta de chocolate: mezcle harina, huevos y cacao. Hornee cuarenta minutos a 180 grados.\n'],
   ['2023-05-10', 'Logos Hakas/Logo Haka Lens blanco (1).png', PNG],
   ['2026-11-13', 'Descargas/ElevenLabs_2026-11-13T22_56_23_Camila_pvc.mp3', Buffer.from('ID3\x03\x00\x00')],
+  ['2006-03-13', 'Messenger/historial_rosa.xml', MSN],
+  ['2009-09-16', 'Correo/familia.mbox', MBOX],
+  ['2004-11-20', 'Outlook Express/Bandeja de entrada.dbx', DBX],
+  // Copiada en 2020 desde la cámara: el EXIF dice que se tomó el 4 de agosto de 2011.
+  ['2020-01-10', 'Fotos/cusco_valle.jpg', jpegWithExif('2011:08:04 17:42:10')],
   ['2018-02-02', 'Misc/datos_binarios', Buffer.from(Array.from({ length: 3000 }, (_, i) => (i * 37 + 11) % 256))]
 ]
 

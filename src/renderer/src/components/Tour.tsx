@@ -17,6 +17,7 @@ export const TOUR_STEPS: TourStep[] = [
   { target: 'search', title: 'tourSearchTitle', text: 'tourSearchText' },
   { target: 'tab-ghosts', title: 'tourGhostsTitle', text: 'tourGhostsText' },
   { target: 'tab-people', title: 'tourPeopleTitle', text: 'tourPeopleText' },
+  { target: 'tab-crypt', title: 'tourCryptTitle', text: 'tourCryptText' },
   { target: 'tab-gallows', title: 'tourGallowsTitle', text: 'tourGallowsText' },
   { target: 'tab-settings', title: 'tourSettingsTitle', text: 'tourSettingsText' },
   { target: 'local', title: 'tourLocalTitle', text: 'tourLocalText' }

@@ -129,6 +129,8 @@ export const IPC = {
   exportFile: 'ouija:export-file',
   bringToPresent: 'ouija:bring-to-present',
   mcpConfig: 'ouija:mcp-config',
+  exorcise: 'ouija:exorcise',
+  openLink: 'ouija:open-link',
   getSettings: 'ouija:get-settings',
   setSettings: 'ouija:set-settings',
   addFolder: 'ouija:add-folder',
@@ -144,6 +146,12 @@ export const IPC = {
   aiForgetKey: 'ouija:ai-forget-key',
   recentChanges: 'ouija:recent-changes',
   localModels: 'ouija:local-models',
+  cryptFolders: 'ouija:crypt-folders',
+  cryptReport: 'ouija:crypt-report',
+  cryptEpitaph: 'ouija:crypt-epitaph',
+  cryptPortraits: 'ouija:crypt-portraits',
+  cryptOpenOther: 'ouija:crypt-open-other',
+  cryptExport: 'ouija:crypt-export',
   fileKinds: 'ouija:file-kinds',
   trashList: 'ouija:trash-list',
   trashRestore: 'ouija:trash-restore',
@@ -216,6 +224,49 @@ export interface FolderSuggestion {
 }
 
 // --- Cambios detectados -----------------------------------------------------
+
+/** Un archivo de la cripta (herencia digital de una carpeta). */
+export interface CryptFile {
+  name: string
+  path: string
+  container?: string
+  ext: string
+  kind: FileKind
+  /** La fecha más antigua conocida: creación, modificación o, en fotos, la del EXIF. */
+  date: number
+  summary?: string
+  resurrected?: boolean
+  /** Programa antiguo que lo guardó: `msn`, `mbox`, `outlook-express`. */
+  origin?: string
+}
+
+export interface CryptYear {
+  year: number
+  count: number
+  highlights: CryptFile[]
+  people: string[]
+}
+
+/** La cripta de una carpeta: lo que se sabe de ella, para leerla o exportarla como grimorio. */
+export interface CryptReport {
+  folder: string
+  name: string
+  files: number
+  from?: number
+  to?: number
+  years: CryptYear[]
+  /** Personas que más aparecen. */
+  souls: { name: string; files: number }[]
+  places: string[]
+  /** Imágenes, de la más antigua a la más nueva. */
+  portraits: CryptFile[]
+  /** Conversaciones (MSN) y correos (mbox, Outlook Express, eml). */
+  voices: CryptFile[]
+  resurrected: CryptFile[]
+  resurrectedCount: number
+  ghosts: number
+  kinds: KindCount[]
+}
 
 /** Cuántos archivos de un tipo hay en el índice. */
 export interface KindCount {
@@ -326,6 +377,13 @@ export interface OuijaApi {
   bringToPresent(path: string): Promise<PresentResult>
   /** Configuración lista para pegar en el `mcp.json` de un agente (Kiro, Claude Desktop…). */
   mcpConfig(): Promise<string>
+  /**
+   * Exorcismo: borra todos los datos de OUIJA (índice, configuración, claves, personas) y la reabre desde
+   * la bienvenida. Con `keepEngine`, conserva el motor local y los modelos descargados. Tus archivos no se tocan.
+   */
+  exorcise(keepEngine: boolean): Promise<void>
+  /** Abre uno de los enlaces de los créditos (correo, repositorio, LinkedIn). Ningún otro. */
+  openLink(url: string): Promise<void>
   getSettings(): Promise<Settings>
   setSettings(patch: Partial<Settings>): Promise<Settings>
   /** Abre el selector de carpetas del sistema y agrega la elegida. */
@@ -340,6 +398,18 @@ export interface OuijaApi {
   appInfo(): Promise<AppInfo>
   /** Tipos de archivo que hay en el índice, con su cantidad (para elegir cuáles incluir en las búsquedas). */
   fileKinds(): Promise<KindCount[]>
+  /** Carpetas que se pueden abrir como cripta (las entregadas a OUIJA). */
+  cryptFolders(): Promise<string[]>
+  /** Lo que OUIJA sabe de una carpeta: años, personas, retratos, voces, resucitados. */
+  cryptReport(folder: string): Promise<CryptReport>
+  /** Epitafio escrito por el modelo de lenguaje con los datos de la cripta, o `null` si no hay modelo. */
+  cryptEpitaph(folder: string): Promise<string | null>
+  /** Miniaturas de los retratos (data URL), en el mismo orden que `portraits`. */
+  cryptPortraits(folder: string): Promise<(string | null)[]>
+  /** Elige otra carpeta (un disco viejo, un respaldo). Si no estaba entregada, se agrega y se indexa. */
+  cryptOpenOther(): Promise<string | null>
+  /** Guarda el grimorio como PDF. Devuelve la ruta, o `null` si se canceló. */
+  cryptExport(html: string, name: string): Promise<string | null>
   /** Modelos locales disponibles para responder: los de Ollama y los de servidores compatibles con OpenAI. */
   localModels(): Promise<LocalModels>
   /** Lo último que OUIJA detectó: archivos nuevos, modificados y eliminados. */

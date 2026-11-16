@@ -122,3 +122,9 @@
   - [x] 21.1 Answer model selector in Settings: Automatic, any Ollama chat model, or a model from an OpenAI-compatible local server (LM Studio, llama.cpp, Jan, vLLM), localhost only
   - [x] 21.2 Data folder `ouija` with automatic rename of the old `medium` folder; internal names, IPC channels and environment variables renamed
   - _Requirements: R18_
+- [x] 22. The Crypt, voices and autopsy
+  - [x] 22.1 Readers for MSN Messenger, Outlook Express and mbox; EXIF dates; `origin` column (index version 3)
+  - [x] 22.2 Crypt report, epitaph from the language model, portraits, PDF grimoire in an isolated window
+  - [x] 22.3 Crypt tab, tour step and texts in six languages
+  - [x] 22.4 `npm run autopsy` benchmark writing `docs/AUTOPSY.md`; unit and e2e tests
+  - _Requirements: R19, R20, R21_

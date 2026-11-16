@@ -1,7 +1,7 @@
 /// <reference lib="dom" />
 import { execFileSync, spawn } from 'node:child_process'
 import { createInterface } from 'node:readline'
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { _electron as electron, type ElectronApplication, type Page } from 'playwright-core'
@@ -203,7 +203,7 @@ describe('demo: carpeta caótica', () => {
     await page.getByRole('button', { name: 'Fantasmas', exact: true }).click()
     const list = page.getByTestId('ghost-list')
     await expect.poll(() => list.innerText()).toContain('tesis_borrador_v2.wpd')
-    await page.getByRole('textbox', { name: 'Buscar entre los fantasmas…' }).fill('TESIS')
+    await page.getByRole('textbox', { name: 'Buscar entre los fantasmas…' }).fill('BORRADOR_V2')
     await expect.poll(() => list.getByRole('button').count()).toBe(1)
     expect(await list.innerText()).toContain('tesis_borrador_v2.wpd')
     await page.getByRole('textbox', { name: 'Buscar entre los fantasmas…' }).fill('')
@@ -211,4 +211,48 @@ describe('demo: carpeta caótica', () => {
     await expect.poll(async () => (await list.innerText()).includes('viaje_peru_2011.jpg') && !(await list.innerText()).includes('rosa_v1.txt')).toBe(true)
     await page.screenshot({ path: '/tmp/ghost-filters.png' })
   })
+  it('voces del más allá: un chat de MSN de 2006 y una carpeta de Outlook Express se encuentran por lo que dicen', async () => {
+    const msn = await call<SearchAnswer>('ask', '¿dónde está el disquete azul del que le hablé a Rosa?')
+    expect(names(msn)).toContain('historial_rosa.xml')
+    const oe = await call<SearchAnswer>('ask', 'correo del profesor Salinas con correcciones de la tesis')
+    expect(names(oe)).toContain('Bandeja de entrada.dbx')
+  }, 120_000)
+  it('la Cripta: años, almas, retratos con fecha EXIF, voces y resucitados; el grimorio se exporta a PDF', async () => {
+    await page.getByRole('button', { name: 'Cripta', exact: true }).click()
+    const report = page.getByTestId('crypt-report')
+    await expect.poll(() => report.innerText(), { timeout: 30_000 }).toMatch(/grimorio de chaos/i)
+    const years = await page.getByTestId('crypt-years').innerText()
+    for (const y of ['2004', '2006', '2008', '2009', '2011', '2019']) expect(years).toContain(y)
+    const voices = await page.getByTestId('crypt-voices').innerText()
+    expect(voices).toContain('historial_rosa.xml')
+    expect(voices).toContain('Conversación de MSN Messenger')
+    expect(voices).toContain('Outlook Express')
+    const portraits = await page.getByTestId('crypt-portraits').innerText()
+    expect(portraits).toContain('cusco_valle.jpg')
+    expect(portraits).toMatch(/2011/) // la fecha de la foto, no la de la copia (2020)
+    expect(await page.getByTestId('crypt-resurrected').innerText()).toContain('tesis_borrador_v2.wpd')
+    await expect.poll(() => page.getByTestId('crypt-epitaph').innerText(), { timeout: 90_000 }).not.toMatch(/escriben…/)
+    expect((await page.getByTestId('crypt-epitaph').innerText()).length).toBeGreaterThan(40)
+    await page.screenshot({ path: '/tmp/crypt.png' })
+    // (?) explica la Cripta paso a paso con el estado real de cada paso.
+    await page.getByRole('button', { name: '¿Cómo funciona la Cripta?' }).click()
+    const help = page.getByTestId('crypt-help')
+    await help.waitFor()
+    const states = await help.locator('li[data-state]').evaluateAll((els) => els.map((e) => e.getAttribute('data-state')))
+    expect(states.slice(0, 2)).toEqual(['done', 'done'])
+    expect(await help.innerText()).toMatch(/\d+ archivos leídos/)
+    expect(await help.innerText()).toMatch(/\d+ retratos y \d+ voces/)
+    await page.waitForTimeout(400)
+    await page.screenshot({ path: '/tmp/crypt-help.png' })
+    await page.keyboard.press('Escape')
+    await expect.poll(() => help.count()).toBe(0)
+    const out = join(mkdtempSync(join(tmpdir(), 'ouija-grimoire-')), 'grimorio.pdf')
+    await app.evaluate(({ dialog, shell }, file) => {
+      dialog.showSaveDialog = (async () => ({ canceled: false, filePath: file })) as typeof dialog.showSaveDialog
+      shell.showItemInFolder = () => undefined
+    }, out)
+    await page.getByRole('button', { name: 'Exportar el grimorio (PDF)' }).click()
+    await expect.poll(() => existsSync(out), { timeout: 30_000 }).toBe(true)
+    expect(readFileSync(out).subarray(0, 4).toString()).toBe('%PDF')
+  }, 240_000)
 })

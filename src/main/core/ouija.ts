@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import { access, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
-import { basename, dirname, extname, join } from 'node:path'
+import { basename, dirname, extname, join, sep } from 'node:path'
 import { OllamaClient, OllamaError, pickChatModel } from '@core/ai/ollama'
 import { detectLocalServers, localServerLlm, type LocalServerDeps } from '@core/ai/localServer'
 import { AiError, type ProviderDeps } from '@core/ai/providers'
@@ -13,8 +13,10 @@ import { convertLegacyToModern, extractText, LEGACY_EXTENSIONS, SHEET_LEGACY_EXT
 import { SqliteStore, type FileFilter } from '@core/memory'
 import { kindOf, type FileKind } from '@shared/filetypes'
 import type { Ghost, Person, PersonSummary, SearchAnswer } from '@shared/types'
-import type { AskFilters, ChangeDto, IndexState, LocalModels, KindCount, NameDecision, OllamaHint, OllamaStatus, RestoreOutcome, Settings, TrashItemDto, TrashOverview } from '@shared/ipc'
+import type { AskFilters, CryptReport, ChangeDto, IndexState, LocalModels, KindCount, NameDecision, OllamaHint, OllamaStatus, RestoreOutcome, Settings, TrashItemDto, TrashOverview } from '@shared/ipc'
 import { AiService } from './ai'
+import { buildCrypt, epitaphPrompt } from './crypt'
+import { LANG_INFO } from '@shared/langs'
 import type { SecretStore } from './secrets'
 import type { SettingsStore } from './settings'
 import { SetupManager } from './setup'
@@ -346,6 +348,69 @@ export class OuijaCore {
         }
       })
     }
+  }
+
+  // --- Cripta: la herencia digital de una carpeta ----------------------------
+
+  /** Solo carpetas entregadas a OUIJA (o dentro de ellas). */
+  private requireCryptFolder(folder: string): string {
+    const ok = this.settings.folders.some((f) => folder === f || folder.startsWith(f.endsWith(sep) ? f : f + sep))
+    if (!ok) throw new Error('Esa carpeta no está entregada a OUIJA')
+    return folder
+  }
+
+  async crypt(folder: string): Promise<CryptReport> {
+    const dir = this.requireCryptFolder(folder)
+    const prefix = dir.endsWith(sep) ? dir : dir + sep
+    const docs = (await this.store.listFiles({ folder: dir })).filter((d) => d.path.startsWith(prefix))
+    const within = (p: string) => p.startsWith(prefix)
+    const [people, places, projects, ghosts] = await Promise.all([
+      this.entityService.list('person'),
+      this.entityService.list('place'),
+      this.entityService.list('project'),
+      this.ghosts().catch(() => [])
+    ])
+    return buildCrypt({ folder: dir, docs, people, places: [...places, ...projects], ghosts: ghosts.filter((g) => within(g.path)).length })
+  }
+
+  /** Epitafio del grimorio, escrito por el modelo de lenguaje solo con los datos del índice. */
+  async cryptEpitaph(folder: string): Promise<string | null> {
+    if (this.deps.passive) return null
+    const report = await this.crypt(folder)
+    if (report.files === 0) return null
+    const llm = await this.documentLlm()
+    if (!llm) return null
+    const lang = this.settings.lang
+    const text = await llm.complete(epitaphPrompt(report, lang === 'es' ? 'español' : LANG_INFO[lang].english), { maxTokens: 200 })
+    const clean = text.replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/^["«“\s]+|["»”\s]+$/g, '').trim()
+    // Como mucho tres frases: un epitafio es breve.
+    const sentences = clean.match(/[^.!?。！？]+[.!?。！？]+/g) ?? [clean]
+    const short = sentences.slice(0, 3).join(' ').trim()
+    return short ? short.slice(0, 600) : null
+  }
+
+  /** Miniaturas de los retratos como data URL (solo imágenes del índice y de tamaño razonable). */
+  async cryptPortraits(folder: string): Promise<(string | null)[]> {
+    const report = await this.crypt(folder)
+    const MIME: Record<string, string> = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', webp: 'image/webp' }
+    let budget = 24 * 1024 * 1024
+    const out: (string | null)[] = []
+    for (const p of report.portraits) {
+      const mime = MIME[p.ext]
+      const doc = await this.store.getDoc(p.path)
+      if (!mime || !doc || doc.size > 3 * 1024 * 1024 || doc.size > budget) {
+        out.push(null)
+        continue
+      }
+      try {
+        const { data } = await this.readIndexed(p.path)
+        budget -= data.length
+        out.push(`data:${mime};base64,${data.toString('base64')}`)
+      } catch {
+        out.push(null)
+      }
+    }
+    return out
   }
 
   // --- Fantasmas y personas ----------------------------------------------
