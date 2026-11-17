@@ -208,56 +208,48 @@
   }
   (function loop() { setTimeout(function () { strikeBolt(); loop(); }, rnd(6000, 16000)); })();
   setTimeout(strikeBolt, 2500);
+})();
 
-  // Imágenes de terror dibujadas en SVG (sin archivos externos).
-  var BONE = '#e7e5f2', RED = '#b91c1c';
-  function eyesImg() {
-    var s = '';
-    for (var i = 0; i < 26; i++) {
-      var x = rnd(40, 560), y = rnd(40, 560), r = rnd(5, 16), g = rnd(14, 40), c = Math.random() < .5 ? RED : '#fde68a';
-      s += '<ellipse cx="' + x + '" cy="' + y + '" rx="' + r + '" ry="' + r * .6 + '" fill="' + c + '"/><ellipse cx="' + (x + g) + '" cy="' + y + '" rx="' + r + '" ry="' + r * .6 + '" fill="' + c + '"/>';
-    }
-    return s;
+// Susurros: mensajes tenebrosos con datos que el navegador ya expone. Todo ocurre en local, nada se envía.
+(function () {
+  var n = parseInt(localStorage.getItem('visits') || '0', 10) + 1;
+  localStorage.setItem('visits', String(n));
+  var ua = navigator.userAgent;
+  var os = /Windows/i.test(ua) ? 'Windows' : /Android/i.test(ua) ? 'Android' : /iPhone|iPad|iOS/i.test(ua) ? 'iOS' : /Mac OS/i.test(ua) ? 'macOS' : /Linux/i.test(ua) ? 'Linux' : '';
+  var browser = /Edg\//.test(ua) ? 'Edge' : /OPR\//.test(ua) ? 'Opera' : /Firefox\//.test(ua) ? 'Firefox' : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : '';
+  var tz = (Intl.DateTimeFormat().resolvedOptions().timeZone || '');
+  var city = tz.indexOf('/') > 0 ? tz.split('/').pop().replace(/_/g, ' ') : '';
+  var d = new Date();
+  var time = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+  var data = { os: os, browser: browser, city: city, time: time, screen: screen.width + '×' + screen.height, visits: String(n) };
+  // Cada plantilla se descarta si le falta algún dato (por ejemplo la ciudad).
+  var L = {
+    en: ['Hello, stranger from {city}...', 'It is {time}. The spirits were waiting for you.', 'We see you from {os}, behind {browser}...', '{screen} pixels, and still you cannot see us.', 'Visit number {visits}. You always come back...', 'Do not look behind you.'],
+    es: ['Hola, extraño de {city}...', 'Son las {time}. Los espíritus te esperaban.', 'Te vemos desde {os}, tras {browser}...', '{screen} píxeles, y aun así no puedes vernos.', 'Visita número {visits}. Siempre vuelves...', 'No mires detrás de ti.'],
+    pt: ['Olá, estranho de {city}...', 'São {time}. Os espíritos esperavam por você.', 'Vemos você do {os}, atrás do {browser}...', '{screen} pixels, e mesmo assim você não nos vê.', 'Visita número {visits}. Você sempre volta...', 'Não olhe para trás.'],
+    fr: ['Bonjour, étranger de {city}...', 'Il est {time}. Les esprits t’attendaient.', 'Nous te voyons depuis {os}, derrière {browser}...', '{screen} pixels, et tu ne peux toujours pas nous voir.', 'Visite numéro {visits}. Tu reviens toujours...', 'Ne regarde pas derrière toi.'],
+    ja: ['こんにちは、{city}から来た見知らぬ人…', '{time}。霊たちはあなたを待っていた。', '{os}の向こう、{browser}の陰から見ている…', '{screen}ピクセル。それでも私たちは見えない。', '{visits}回目の訪問。あなたはいつも戻ってくる…', '後ろを見てはいけない。'],
+    zh: ['你好，来自{city}的陌生人……', '现在是{time}。亡灵一直在等你。', '我们从{os}看着你，就在{browser}的背后……', '{screen}像素，你仍然看不见我们。', '第{visits}次来访。你总会回来……', '不要回头。']
+  };
+  var el = document.createElement('div');
+  el.className = 'whisper';
+  el.setAttribute('aria-hidden', 'true');
+  document.body.appendChild(el);
+  var last = -1;
+  function next() {
+    var lang = L[document.documentElement.lang] ? document.documentElement.lang : 'en';
+    var ok = L[lang].map(function (tpl, i) { return i; }).filter(function (i) {
+      var need = L[lang][i].match(/\{(\w+)\}/);
+      if (!need) return true;
+      if (need[1] === 'visits' && n < 2) return false;
+      return !!data[need[1]];
+    });
+    var pool = ok.filter(function (i) { return i !== last; });
+    var i = pool[Math.floor(Math.random() * pool.length)];
+    last = i;
+    el.textContent = L[lang][i].replace(/\{(\w+)\}/g, function (_, k) { return data[k]; });
+    el.classList.remove('on'); void el.offsetWidth; el.classList.add('on');
+    setTimeout(next, 14000 + Math.random() * 14000);
   }
-  var IMGS = [
-    // Calavera
-    '<path d="M300 40C170 40 90 130 100 270C104 330 130 360 160 380L160 470L440 470L440 380C470 360 496 330 500 270C510 130 430 40 300 40Z" fill="' + BONE + '"/><ellipse cx="225" cy="260" rx="52" ry="62" fill="#000"/><ellipse cx="375" cy="260" rx="52" ry="62" fill="#000"/><path d="M300 320L270 395L330 395Z" fill="#000"/><path d="M190 430V560M240 430V570M300 430V575M360 430V570M410 430V560" stroke="#000" stroke-width="12"/>',
-    // Fantasma gritando
-    '<path d="M300 30C190 30 130 110 120 230L60 210C20 195 0 240 25 280L100 400C106 480 100 540 110 590C160 620 200 580 250 600C300 625 340 585 390 600C440 615 500 590 520 570C500 510 510 450 500 400L575 280C600 240 580 195 540 210L480 230C470 110 410 30 300 30Z" fill="' + BONE + '"/><path d="M190 170C240 190 270 215 265 245C230 250 195 235 185 205Z" fill="#000"/><path d="M410 170C360 190 330 215 335 245C370 250 405 235 415 205Z" fill="#000"/><ellipse cx="300" cy="400" rx="95" ry="140" fill="#000"/><ellipse cx="300" cy="440" rx="55" ry="70" fill="' + RED + '" fill-opacity=".5"/>',
-    // Ojos en la oscuridad
-    eyesImg(),
-    // Rostro pálido con sonrisa
-    '<path d="M300 20C190 20 150 120 160 230C165 320 190 400 220 470L220 590L380 590L380 470C410 400 435 320 440 230C450 120 410 20 300 20Z" fill="#d6d3e6"/><ellipse cx="245" cy="215" rx="38" ry="62" fill="#000"/><ellipse cx="355" cy="215" rx="38" ry="62" fill="#000"/><path d="M175 400C230 520 370 520 425 400C400 470 200 470 175 400Z" fill="#000"/><path d="M200 435L215 460M235 450L245 478M275 458L278 485M325 458L322 485M365 450L355 478M400 435L385 460" stroke="' + BONE + '" stroke-width="7"/>'
-  ];
-  function show(scare, i, flip) {
-    scare.innerHTML = '<svg viewBox="0 0 600 620" style="transform:' + (flip ? 'scaleX(-1) ' : '') + 'scale(' + rnd(1, 1.35).toFixed(2) + ') rotate(' + rnd(-6, 6).toFixed(1) + 'deg);filter:' + (Math.random() < .3 ? 'invert(1)' : 'contrast(1.4) saturate(1.5)') + '">' + IMGS[i] + '</svg>';
-  }
-
-  function scare() {
-    var el = document.getElementById('scare');
-    var done = false;
-    function end() { if (done) return; done = true; el.classList.remove('on'); el.innerHTML = ''; }
-    el.addEventListener('click', end);
-    document.addEventListener('keydown', end, { once: true });
-    el.innerHTML = '';
-    el.classList.add('on');                   // todo negro
-    setTimeout(function () {
-      var t0 = Date.now(), last = -1;
-      (function flick() {
-        if (done) return;
-        if (Date.now() - t0 > rnd(2400, 3200)) { end(); return; }
-        if (Math.random() < .55) {            // parpadeo: imagen o negro
-          var i; do { i = Math.floor(Math.random() * IMGS.length); } while (i === last);
-          last = i; show(el, i, Math.random() < .5);
-        } else { el.innerHTML = ''; }
-        setTimeout(flick, rnd(60, 190));
-      })();
-    }, rnd(1800, 2600));
-  }
-
-  // Una vez por visita (sesión), en un momento aleatorio. ?scare=1 lo dispara enseguida.
-  var force = /[?&]scare=1/.test(location.search);
-  if (force || !sessionStorage.getItem('scared')) {
-    setTimeout(function () { sessionStorage.setItem('scared', '1'); scare(); }, force ? 1500 : rnd(12000, 45000));
-  }
+  setTimeout(next, 5000);
 })();
