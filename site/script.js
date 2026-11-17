@@ -215,7 +215,12 @@
   var n = parseInt(localStorage.getItem('visits') || '0', 10) + 1;
   localStorage.setItem('visits', String(n));
   var ua = navigator.userAgent;
-  var os = /Windows/i.test(ua) ? 'Windows' : /Android/i.test(ua) ? 'Android' : /iPhone|iPad|iOS/i.test(ua) ? 'iOS' : /Mac OS/i.test(ua) ? 'macOS' : /Linux/i.test(ua) ? 'Linux' : '';
+  // Android también dice "Linux" en el user agent: se prioriza la plataforma real.
+  var uaPlat = (navigator.userAgentData && navigator.userAgentData.platform) || '';
+  var plat = uaPlat || navigator.platform || '';
+  var os = /^Win/i.test(plat) ? 'Windows' : /Mac/i.test(plat) ? 'macOS' : /iPhone|iPad|iPod/i.test(plat) ? 'iOS' : /Android/i.test(plat) ? 'Android'
+    : /Chrome OS|CrOS/i.test(plat) ? 'ChromeOS' : /^Linux/i.test(plat) && !/arm|aarch/i.test(plat) ? 'Linux'
+    : /Android/i.test(ua) && /Mobile/i.test(ua) ? 'Android' : /Linux/i.test(ua) ? 'Linux' : /Windows/i.test(ua) ? 'Windows' : /Mac OS/i.test(ua) ? 'macOS' : '';
   var browser = /Edg\//.test(ua) ? 'Edge' : /OPR\//.test(ua) ? 'Opera' : /Firefox\//.test(ua) ? 'Firefox' : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : '';
   var tz = (Intl.DateTimeFormat().resolvedOptions().timeZone || '');
   var city = tz.indexOf('/') > 0 ? tz.split('/').pop().replace(/_/g, ' ') : '';
@@ -252,4 +257,50 @@
     setTimeout(next, 14000 + Math.random() * 14000);
   }
   setTimeout(next, 5000);
+})();
+
+// Fantasmas pequeños que aparecen sigilosos y buscan el cursor.
+(function () {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var mouse = null, ghosts = [], MAX = 6;
+  var rnd = function (a, b) { return a + Math.random() * (b - a); };
+  addEventListener('pointermove', function (e) {
+    if (e.pointerType === 'touch') return;
+    mouse = { x: e.clientX, y: e.clientY };
+  });
+  function spawn() {
+    if (!mouse || ghosts.length >= MAX || document.hidden) return;
+    var size = rnd(22, 38), el = document.createElement('div');
+    el.className = 'mini-ghost';
+    el.style.width = el.style.height = size + 'px';
+    el.innerHTML = '<svg viewBox="0 0 100 100"><use href="#ghost"/></svg>';
+    document.body.appendChild(el);
+    // Nace lejos del cursor, en un punto cualquiera de la pantalla.
+    var x, y;
+    do { x = rnd(0, innerWidth); y = rnd(0, innerHeight); } while (Math.hypot(x - mouse.x, y - mouse.y) < 250);
+    var g = { el: el, x: x, y: y, k: rnd(0.008, 0.025), r: rnd(30, 90), w: rnd(0.0006, 0.0016), p: rnd(0, 6.28), born: performance.now(), life: rnd(25000, 45000), dir: 1 };
+    ghosts.push(g);
+    requestAnimationFrame(function () { el.classList.add('on'); });
+  }
+  function tick(now) {
+    ghosts = ghosts.filter(function (g) {
+      var age = now - g.born;
+      if (age > g.life) {
+        g.el.classList.remove('on');
+        if (age > g.life + 2200) { g.el.remove(); return false; }
+      }
+      if (mouse) {
+        var tx = mouse.x + Math.cos(now * g.w + g.p) * g.r, ty = mouse.y + Math.sin(now * g.w * 1.3 + g.p) * g.r * 0.7;
+        var dx = tx - g.x;
+        g.x += dx * g.k; g.y += (ty - g.y) * g.k;
+        if (Math.abs(dx) > 4) g.dir = dx > 0 ? 1 : -1;
+      }
+      var bob = Math.sin(now / 400 + g.p) * 4;
+      g.el.style.transform = 'translate(' + (g.x - 15).toFixed(1) + 'px,' + (g.y - 15 + bob).toFixed(1) + 'px) scaleX(' + g.dir + ')';
+      return true;
+    });
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+  setTimeout(function () { spawn(); (function loop() { setTimeout(function () { spawn(); loop(); }, rnd(4000, 9000)); })(); }, 4000);
 })();
