@@ -92,7 +92,7 @@ function Obituary({ ghost }: { ghost: Ghost }) {
   )
 }
 
-export default function GhostsView() {
+export default function GhostsView({ refreshKey }: { refreshKey?: string }) {
   const { t } = useI18n()
   const [ghosts, setGhosts] = useState<Ghost[] | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -104,13 +104,13 @@ export default function GhostsView() {
       .then((list) => {
         if (!alive) return
         setGhosts(list)
-        setSelectedId(list[0]?.id ?? null)
+        setSelectedId((cur) => (cur && list.some((g) => g.id === cur) ? cur : (list[0]?.id ?? null)))
       })
       .catch(() => alive && setGhosts([]))
     return () => {
       alive = false
     }
-  }, [])
+  }, [refreshKey])
 
   const [query, setQuery] = useState('')
   const [kinds, setKinds] = useState<FileKind[]>([])

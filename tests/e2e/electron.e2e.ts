@@ -198,7 +198,7 @@ describe('salir', () => {
     const about = page.getByTestId('about')
     await about.waitFor()
     const text = await about.innerText()
-    for (const s of ['Creado con', 'Kiro AWS', 'Felipe Farías', 'farias3felipe@gmail.com', 'github.com/FelipeFariasAlfaro/OUIJA', 'linkedin.com/in/felipefariasalfaro']) expect(text).toContain(s)
+    for (const s of ['Creado con', 'Kiro AWS', 'Felipe Farías', 'github.com/FelipeFariasAlfaro/OUIJA', 'linkedin.com/in/felipefariasalfaro']) expect(text).toContain(s)
     await page.waitForTimeout(500)
     await page.screenshot({ path: '/tmp/about-modal.png' })
     await app.evaluate(({ shell }) => {
@@ -207,8 +207,7 @@ describe('salir', () => {
       shell.openExternal = (async (u: string) => void g.links.push(u)) as typeof shell.openExternal
     })
     await about.getByRole('button', { name: /LinkedIn/ }).click()
-    await about.getByRole('button', { name: /farias3felipe/ }).click()
-    await expect.poll(() => app.evaluate(() => (globalThis as unknown as { links: string[] }).links)).toEqual(['https://www.linkedin.com/in/felipefariasalfaro/', 'mailto:farias3felipe@gmail.com'])
+    await expect.poll(() => app.evaluate(() => (globalThis as unknown as { links: string[] }).links)).toEqual(['https://www.linkedin.com/in/felipefariasalfaro/'])
     const blocked = await page.evaluate(() => (window as unknown as { ouija: { openLink(u: string): Promise<void> } }).ouija.openLink('https://evil.example').then(() => 'ok', (e: Error) => e.message))
     expect(blocked).toMatch(/no permitido/)
     await page.keyboard.press('Escape')

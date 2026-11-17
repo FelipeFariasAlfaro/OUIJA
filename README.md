@@ -38,7 +38,8 @@ And it resurrects what those files meant:
 7. **MCP server.** Kiro, Claude Desktop or any MCP agent can ask OUIJA where your files are and read the ones it resurrected. Settings shows the configuration ready to paste.
 8. **Six languages:** Spanish, English, Portuguese, French, Japanese and Chinese.
 9. **A haunted interface** that serves the function: séance metaphor, storm and ghosts on the welcome screen, subtle fog and distant lightning in the app, a guided tour, and a sinister **About** (?) with a tombstone.
-10. **Automatic updates** from GitHub Releases, and an **Exorcism** in Settings that erases all of OUIJA's data (never your files) and starts again from the welcome screen.
+10. **Your tabs keep their state:** switch from Summon to Ghosts and back and your search, filters and selection are still there.
+11. **Automatic updates** from GitHub Releases, and an **Exorcism** in Settings that erases all of OUIJA's data (never your files) and starts again from the welcome screen.
 
 ## Autopsy report
 
@@ -85,7 +86,7 @@ OUIJA ships a read-only [Model Context Protocol](https://modelcontextprotocol.io
 ```json
 {
   "mcpServers": {
-    "ouija": { "command": "/path/to/OUIJA-0.5.1.AppImage", "args": ["--mcp"] }
+    "ouija": { "command": "/path/to/OUIJA-0.5.6.AppImage", "args": ["--mcp"] }
   }
 }
 ```
@@ -111,7 +112,7 @@ OUIJA checks GitHub Releases when it opens and every 6 hours (can be turned off 
 
 On first launch you pick a language, see how it works, choose a local or external language model, and the app sets itself up: it uses the Ollama you already have or downloads its own (verified with SHA-256, no administrator rights) and pulls `bge-m3` (meaning) and, if you have no chat model yet, `qwen3.5:4b` (answers). That is about 6 GB, once, and the only thing that uses the internet. Optional add-ons read more formats: LibreOffice (old formats and *Bring to the present* as DOCX), Tesseract and Poppler (OCR), 7-Zip (RAR, 7z, ARJ, LZH).
 
-`–` minimizes to the taskbar, `×` quits, and `Ctrl/Cmd + Shift + Space` brings it back. On GNOME the tray icon needs the AppIndicator extension; on Wayland the global shortcut depends on the desktop portal.
+`–` minimizes to the taskbar, `×` quits, and `Ctrl/Cmd + Shift + Space` brings it back (you can change this shortcut in Settings). On GNOME the tray icon needs the AppIndicator extension; on Wayland the global shortcut depends on the desktop portal.
 
 ## Demo
 

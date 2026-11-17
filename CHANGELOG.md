@@ -2,6 +2,13 @@
 
 All notable changes to OUIJA. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.5.6] - 2026-11-17
+### Added
+- **Configurable global shortcut:** in Settings, click the shortcut, press the new key combination and it applies immediately. A Reset button restores `Ctrl/Cmd + Shift + Space`.
+### Changed
+- Tabs keep their state: your search, results, filters and selections are no longer lost when you switch tabs and come back.
+- Ghosts and People refresh after indexing without losing your selection.
+- The About screen no longer shows an email address.
 ## [0.5.1] - 2026-11-16
 
 ### Changed

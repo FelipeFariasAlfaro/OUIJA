@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useState, type KeyboardEvent, type ReactNode } from 'react'
 import type { AppInfo, IndexState, KindCount, LocalModels, OllamaStatus, Settings, UpdateState } from '@shared/ipc'
 import { KIND_LABEL } from '@shared/filetypes'
 import type { Lang } from '@shared/types'
@@ -12,6 +12,19 @@ import ExorcismModal from '../components/ExorcismModal'
 import { AnimatePresence } from 'framer-motion'
 import { useI18n } from '../i18n'
 
+const DEFAULT_SHORTCUT = 'CommandOrControl+Shift+Space'
+const KEY_NAMES: Record<string, string> = { ' ': 'Space', ArrowUp: 'Up', ArrowDown: 'Down', ArrowLeft: 'Left', ArrowRight: 'Right', Enter: 'Return', '+': 'Plus' }
+/** Convierte un evento de teclado en un acelerador de Electron. `null` = solo modificadores; `'invalid'` = sin modificador. */
+function toAccelerator(e: KeyboardEvent): string | null {
+  if (['Control', 'Shift', 'Alt', 'Meta', 'AltGraph'].includes(e.key)) return null
+  const mods = [...(e.ctrlKey || e.metaKey ? ['CommandOrControl'] : []), ...(e.altKey ? ['Alt'] : []), ...(e.shiftKey ? ['Shift'] : [])]
+  const isFn = /^F([1-9]|1\d|2[0-4])$/.test(e.key)
+  if (mods.length === 0 && !isFn) return 'invalid'
+  // `code` evita que Mayús cambie la letra (Shift+1 daría "!").
+  const fromCode = /^Key([A-Z])$/.exec(e.code)?.[1] ?? /^Digit(\d)$/.exec(e.code)?.[1]
+  const key = fromCode ?? KEY_NAMES[e.key] ?? (e.key.length === 1 ? e.key.toUpperCase() : e.key)
+  return [...mods, key].join('+')
+}
 function Card({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="rounded-xl border border-white/10 bg-white/[0.03] p-3.5">
@@ -62,6 +75,8 @@ export default function SettingsView({ settings, index, onSettings, onTour }: { 
   const [exorcism, setExorcism] = useState(false)
   const [ollama, setOllama] = useState<OllamaStatus | null>(null)
   const [info, setInfo] = useState<AppInfo | null>(null)
+  const [capturing, setCapturing] = useState(false)
+  const [shortcutError, setShortcutError] = useState(false)
   const [confirmForget, setConfirmForget] = useState(false)
   const [forgot, setForgot] = useState(false)
   const [ai, setAi] = useState<AiConfig | null>(null)
@@ -363,10 +378,32 @@ export default function SettingsView({ settings, index, onSettings, onTour }: { 
           </span>
         </label>
         {info && (
-          <p className="mt-2 text-[12px] text-zinc-400">
-            {t.shortcut}: <kbd className="rounded bg-white/5 px-1">{info.shortcut.accelerator}</kbd> —{' '}
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-[12px] text-zinc-400">
+            <span>{t.shortcut}:</span>
+            <button
+              type="button"
+              onClick={() => { setCapturing(true); setShortcutError(false) }}
+              onKeyDown={(e) => {
+                if (!capturing) return
+                e.preventDefault()
+                e.stopPropagation()
+                if (e.key === 'Escape') { setCapturing(false); return }
+                const acc = toAccelerator(e)
+                if (acc === 'invalid') { setShortcutError(true); return }
+                if (acc === null) return // solo un modificador: se espera la tecla
+                setCapturing(false)
+                setShortcutError(false)
+                void api.setSettings({ shortcut: acc }).then(onSettings).then(() => api.appInfo().then(setInfo))
+              }}
+              onBlur={() => setCapturing(false)}
+              className={`rounded border px-2 py-0.5 ${capturing ? 'border-violet-400 text-violet-200' : 'border-white/10 bg-white/5 text-zinc-200'}`}
+            >
+              {capturing ? t.shortcutPress : info.shortcut.accelerator.replace('CommandOrControl', 'Ctrl')}
+            </button>
+            {!capturing && <ActionButton onClick={() => void api.setSettings({ shortcut: DEFAULT_SHORTCUT }).then(onSettings).then(() => api.appInfo().then(setInfo))}>{t.shortcutReset}</ActionButton>}
             <span className={info.shortcut.status === 'registered' ? 'text-emerald-300' : 'text-amber-200'}>{info.shortcut.status === 'registered' ? t.shortcutOk : t.shortcutNo}</span>
-          </p>
+            {shortcutError && <span className="w-full text-amber-200">{t.shortcutInvalid}</span>}
+          </div>
         )}
         {info && /gnome/i.test(info.desktop) && <p className="mt-1 text-[12px] text-zinc-500">{t.trayGnome}</p>}
       </Card>

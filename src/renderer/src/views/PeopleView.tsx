@@ -8,7 +8,7 @@ import { useI18n } from '../i18n'
 /** Para buscar sin importar tildes ni mayúsculas. */
 const fold = (s: string): string => s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
 
-export default function PeopleView() {
+export default function PeopleView({ refreshKey }: { refreshKey?: string }) {
   const { t, fmtDate } = useI18n()
   const [people, setPeople] = useState<PersonSummary[] | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -33,7 +33,7 @@ export default function PeopleView() {
 
   useEffect(() => {
     void reload().catch(() => setPeople([]))
-  }, [reload])
+  }, [reload, refreshKey])
 
   useEffect(() => {
     if (!selectedId) {

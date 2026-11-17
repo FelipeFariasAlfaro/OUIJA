@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import type { IndexState, Settings } from '@shared/ipc'
 import { AI_PROVIDERS } from '@shared/ai'
@@ -21,10 +21,20 @@ import SettingsView from './views/SettingsView'
 type View = 'search' | 'ghosts' | 'people' | 'crypt' | 'gallows' | 'settings'
 const VIEWS: View[] = ['search', 'ghosts', 'people', 'crypt', 'gallows', 'settings']
 
+/** Monta la vista en cuanto se visita y la oculta (sin desmontarla) al cambiar de pestaña. */
+function Pane({ id, view, visited, children }: { id: View; view: View; visited: ReadonlySet<View>; children: ReactNode }) {
+  if (view !== id && !visited.has(id)) return null
+  return <div className={view === id ? 'flex min-h-0 flex-1 flex-col' : 'hidden'}>{children}</div>
+}
+
 const IDLE: IndexState = { phase: 'idle', processed: 0, total: 0, indexed: 0, skipped: 0, errors: 0 }
 
 export default function App() {
   const [view, setView] = useState<View>('search')
+  const [visited, setVisited] = useState<ReadonlySet<View>>(new Set(['search']))
+  useEffect(() => {
+    setVisited((v) => (v.has(view) ? v : new Set(v).add(view)))
+  }, [view])
   const [settings, setSettings] = useState<Settings | null>(null)
   const [index, setIndex] = useState<IndexState>(IDLE)
   const [touring, setTouring] = useState(false)
@@ -163,11 +173,22 @@ export default function App() {
 
         <UpdateBanner />
 
-        {view === 'search' && <SearchView key={lang} hasFolders={(settings?.folders.length ?? 0) > 0 || index.indexed > 0} onAddFolder={addFolder} changesKey={`${index.phase}-${index.indexed}`} onGallows={() => setView('gallows')} />}
-        {view === 'ghosts' && <GhostsView key={`${lang}-${index.phase}`} />}
-        {view === 'people' && <PeopleView key={`${lang}-${index.phase}`} />}
-        {view === 'crypt' && <CryptView key={lang} refreshKey={`${index.phase}-${index.indexed}`} indexing={busy} onSettings={() => setView('settings')} />}
-        {view === 'gallows' && <GallowsView key={lang} />}
+        {/* Las pestañas visitadas siguen montadas (ocultas) para conservar búsqueda, selección y filtros. */}
+        <Pane id="search" view={view} visited={visited}>
+          <SearchView key={lang} hasFolders={(settings?.folders.length ?? 0) > 0 || index.indexed > 0} onAddFolder={addFolder} changesKey={`${index.phase}-${index.indexed}`} onGallows={() => setView('gallows')} />
+        </Pane>
+        <Pane id="ghosts" view={view} visited={visited}>
+          <GhostsView key={lang} refreshKey={`${index.phase}`} />
+        </Pane>
+        <Pane id="people" view={view} visited={visited}>
+          <PeopleView key={lang} refreshKey={`${index.phase}`} />
+        </Pane>
+        <Pane id="crypt" view={view} visited={visited}>
+          <CryptView key={lang} refreshKey={`${index.phase}-${index.indexed}`} indexing={busy} onSettings={() => setView('settings')} />
+        </Pane>
+        <Pane id="gallows" view={view} visited={visited}>
+          <GallowsView key={lang} />
+        </Pane>
         {view === 'settings' && settings && <SettingsView settings={settings} index={index} onSettings={setSettings} onTour={startTour} />}
 
         {touring && <Tour onDone={endTour} />}
