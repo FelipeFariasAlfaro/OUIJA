@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OUIJA · Desktop search, back from the dead</title>
+  <meta name="description" content="OUIJA brings desktop search back from the dead with local AI. Find files by meaning, resurrect dead formats. Windows and Linux.">
+  <link rel="icon" href="icon.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="fog" aria-hidden="true"></div>
+  <div class="fog fog2" aria-hidden="true"></div>
+  <div class="flash" id="flash" aria-hidden="true"></div>
+  <div class="ghosts" aria-hidden="true">
+    <svg class="ghost g1" viewBox="0 0 100 100"><use href="#ghost"/></svg>
+    <svg class="ghost g2" viewBox="0 0 100 100"><use href="#ghost"/></svg>
+    <svg class="ghost g3" viewBox="0 0 100 100"><use href="#ghost"/></svg>
+  </div>
+
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <g id="ghost">
+        <path d="M50 4C34 4 25 16 23 33L15 30C9 27 5 32 8 38L18 56C19 70 18 80 20 90C26 96 32 90 38 93C44 96 50 90 56 93C62 96 70 91 76 90C86 88 93 86 93 80C90 72 84 62 81 54L90 40C94 34 91 25 86 26C82 27 80 31 79 34C77 17 68 4 50 4Z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="5" stroke-linejoin="round"/>
+        <path d="M31 19C37 22 43 25 43 29C40 31 36 31 33 29C30 26 30 22 31 19Z" fill="currentColor"/>
+        <path d="M66 19C60 22 55 25 54 28C57 31 61 31 64 29C67 26 67 22 66 19Z" fill="currentColor"/>
+        <path d="M32 35C40 38 58 37 65 34C64 40 62 44 60 46L56 43L52 48L48 43L44 49L40 44L37 47C34 43 32 39 32 35Z" fill="currentColor"/>
+      </g>
+    </defs>
+  </svg>
+
+  <header class="top">
+    <span class="brand"><img src="icon.png" alt="" width="28" height="28"> OUIJA</span>
+    <nav>
+      <a href="#what" data-i18n="nav_what">What it is</a>
+      <a href="#goal" data-i18n="nav_goal">Purpose</a>
+      <a href="#download" data-i18n="nav_dl">Download</a>
+      <a href="https://github.com/FelipeFariasAlfaro/OUIJA" rel="noopener">GitHub</a>
+      <button id="lang" type="button" aria-label="Language">ES</button>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <svg class="hero-ghost" viewBox="0 0 100 100" aria-hidden="true"><use href="#ghost"/></svg>
+      <h1 class="glitch" data-text="OUIJA">OUIJA</h1>
+      <p class="tag" data-i18n="tag">Desktop search died in 2011.<br><strong>OUIJA brings it back from the dead.</strong></p>
+      <p class="sub" data-i18n="sub">Ask in your own words. The spirits answer with where the file is. Everything runs on your computer.</p>
+      <a class="btn big" href="#download" data-i18n="cta">Summon the download</a>
+      <span class="badge" data-i18n="badge">Built for Kiroween 2026 · Resurrection</span>
+    </section>
+
+    <section id="what">
+      <h2 data-i18n="what_h">What it is</h2>
+      <p class="lead" data-i18n="what_p">OUIJA is a desktop app for Windows and Linux that resurrects a dead technology, personal desktop search, and the files it left behind: documents in formats no program opens anymore, backups nobody remembers and files sent to the trash.</p>
+      <div class="cards">
+        <article><h3 data-i18n="c1_h">Summon</h3><p data-i18n="c1_p">Search by meaning, not by keywords. “Where is the poem I wrote for Rosa?” and the board points to it, even inside a backup.</p></article>
+        <article><h3 data-i18n="c2_h">Dead formats</h3><p data-i18n="c2_p">WordPerfect, WordStar, Works, Lotus, MSN Messenger chats, Outlook Express folders and broken encodings come back readable.</p></article>
+        <article><h3 data-i18n="c3_h">The Crypt</h3><p data-i18n="c3_p">Open a digital inheritance and get a grimoire of memories: years, people, dated portraits and an epitaph. Export it as PDF.</p></article>
+        <article><h3 data-i18n="c4_h">Gallows &amp; ghosts</h3><p data-i18n="c4_p">Bring back what you sent to the trash and hunt forgotten files, exact copies and near-identical versions.</p></article>
+        <article><h3 data-i18n="c5_h">100% local</h3><p data-i18n="c5_p">No cloud, no telemetry. Local AI first (Ollama, LM Studio…); an external model only if you choose it.</p></article>
+        <article><h3 data-i18n="c6_h">Open to agents</h3><p data-i18n="c6_p">An MCP server lets Kiro, Claude Desktop or any agent ask OUIJA where your files are.</p></article>
+      </div>
+    </section>
+
+    <section id="goal">
+      <h2 data-i18n="goal_h">Purpose</h2>
+      <p class="lead" data-i18n="goal_p1">Google Desktop Search promised to search your PC the way Google searched the web, and was discontinued in 2011. Everything moved to the cloud, but our files did not: they are still scattered across disks, old backups and formats nobody can open.</p>
+      <p class="lead" data-i18n="goal_p2">OUIJA resurrects that idea with what was impossible then: local embeddings, local language models and forensic recovery of old formats. The goal is simple: you remember something, and your own computer finds it, privately.</p>
+      <blockquote data-i18n="kiro">Created for <strong>Kiroween 2026</strong>, in the Resurrection category: a dead technology, brought back to life.</blockquote>
+    </section>
+
+    <section id="download">
+      <h2 data-i18n="dl_h">Download</h2>
+      <p class="lead" id="dl-version" data-i18n="dl_loading">Looking for the latest release…</p>
+      <div class="dl">
+        <div class="dl-card">
+          <h3>Windows</h3>
+          <a class="btn" id="dl-win" href="https://github.com/FelipeFariasAlfaro/OUIJA/releases/latest"><span data-i18n="dl_win">Download installer</span> <small>.exe</small></a>
+        </div>
+        <div class="dl-card">
+          <h3>Linux</h3>
+          <a class="btn" id="dl-appimage" href="https://github.com/FelipeFariasAlfaro/OUIJA/releases/latest"><span data-i18n="dl_appimage">Download AppImage</span> <small>.AppImage</small></a>
+          <a class="btn alt" id="dl-deb" href="https://github.com/FelipeFariasAlfaro/OUIJA/releases/latest"><span data-i18n="dl_deb">Download .deb</span> <small>Debian / Ubuntu</small></a>
+        </div>
+      </div>
+      <p class="note"><a href="https://github.com/FelipeFariasAlfaro/OUIJA/releases" rel="noopener" data-i18n="all_rel">All releases</a></p>
+      <p class="note" data-i18n="linux_note">AppImage: make it executable (<code>chmod +x OUIJA-*.AppImage</code>) and run it.</p>
+    </section>
+  </main>
+
+  <footer>
+    <p>© 2026 HakaLab · <a href="https://github.com/FelipeFariasAlfaro/OUIJA" rel="noopener">GitHub</a></p>
+  </footer>
+  <script src="script.js"></script>
+</body>
+</html>
