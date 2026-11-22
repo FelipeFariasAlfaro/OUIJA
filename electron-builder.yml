@@ -1,6 +1,6 @@
-appId: com.hakalab.ouija
+appId: com.felipefarias.ouija
 productName: OUIJA
-copyright: Copyright © 2026 HakaLab
+copyright: Copyright © 2026 Felipe Farías A.
 directories:
   output: release
   buildResources: resources
@@ -25,7 +25,7 @@ linux:
     - AppImage
     - deb
   category: Utility
-  maintainer: HakaLab <contacto@hakalab.com>
+  maintainer: Felipe Farías A.
   synopsis: Find your files by meaning, resurrect old formats and hunt digital ghosts.
   executableName: ouija
   desktop:

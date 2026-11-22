@@ -46,9 +46,8 @@
     "vitest": "^5.1.0"
   },
   "author": {
-    "name": "HakaLab",
-    "email": "contacto@hakalab.com"
+    "name": "Felipe Farías A."
   },
-  "homepage": "https://hakalab.com",
+  "homepage": "https://github.com/FelipeFariasAlfaro/OUIJA",
   "desktopName": "ouija.desktop"
 }
